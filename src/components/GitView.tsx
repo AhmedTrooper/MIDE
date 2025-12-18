@@ -1,8 +1,11 @@
 import { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { useEditorStore } from "../lib/store";
-import { RefreshCw, Check, Play, GitCommit } from "lucide-react";
+import { RefreshCw, GitCommit } from "lucide-react";
 import { Button } from "./ui/button";
+import { Textarea } from "./ui/textarea";
+import { ScrollArea } from "./ui/scroll-area";
+import { Badge } from "./ui/badge";
 
 interface GitFile {
   status: string;
@@ -17,13 +20,18 @@ export default function GitView() {
   const [error, setError] = useState<string | null>(null);
 
   const fetchStatus = async () => {
-    if (!projectPath) return;
+    if (!projectPath) {
+      console.warn("GitView: No project path set");
+      return;
+    }
+    console.log("GitView: Fetching status for", projectPath);
     setIsLoading(true);
     setError(null);
     try {
-      const parsedFiles = await invoke<GitFile[]>("git_status", {
+      const parsedFiles = await invoke<GitFile[]>("get_git_status", {
         cwd: projectPath,
       });
+      console.log("GitView: Status result", parsedFiles);
 
       setFiles(parsedFiles);
     } catch (err) {
@@ -90,8 +98,8 @@ export default function GitView() {
       </div>
 
       <div className="p-2 border-b border-[#333] space-y-2">
-        <textarea
-          className="w-full bg-[#3c3c3c] text-white text-sm p-2 rounded border border-[#333] focus:border-[#007fd4] outline-none resize-none h-20"
+        <Textarea
+          className="min-h-[80px] bg-[#3c3c3c] border-[#333] focus-visible:ring-[#007fd4] resize-none text-xs text-white placeholder:text-gray-500"
           placeholder="Message (Ctrl+Enter to commit)"
           value={commitMessage}
           onChange={(e) => setCommitMessage(e.target.value)}
@@ -110,7 +118,7 @@ export default function GitView() {
         </Button>
       </div>
 
-      <div className="flex-1 overflow-y-auto">
+      <ScrollArea className="flex-1">
         {error ? (
           <div className="p-4 text-red-400 text-xs">{error}</div>
         ) : files.length === 0 ? (
@@ -119,19 +127,23 @@ export default function GitView() {
           </div>
         ) : (
           <div className="py-2">
-            <div className="px-4 pb-2 text-xs font-bold text-gray-400 uppercase flex justify-between">
+            <div className="px-4 pb-2 text-xs font-bold text-gray-400 uppercase flex justify-between items-center">
               <span>Changes</span>
-              <span className="bg-[#333] px-1.5 rounded-full text-[10px]">
+              <Badge
+                variant="secondary"
+                className="h-5 px-1.5 text-[10px] bg-[#333] hover:bg-[#333] text-gray-300 rounded-full"
+              >
                 {files.length}
-              </span>
+              </Badge>
             </div>
             {files.map((file) => (
               <div
                 key={file.path}
                 className="px-4 py-1 hover:bg-[#2a2d2e] cursor-pointer flex items-center gap-2 group"
               >
-                <span
-                  className={`text-[10px] font-bold w-4 text-center ${
+                <Badge
+                  variant="outline"
+                  className={`h-5 w-5 p-0 flex items-center justify-center border-none text-[10px] font-bold ${
                     file.status.includes("M")
                       ? "text-yellow-500"
                       : file.status.includes("A") || file.status.includes("??")
@@ -140,7 +152,7 @@ export default function GitView() {
                   }`}
                 >
                   {file.status.includes("??") ? "U" : file.status[0]}
-                </span>
+                </Badge>
                 <span
                   className="text-sm text-gray-300 truncate flex-1"
                   title={file.path}
@@ -151,7 +163,7 @@ export default function GitView() {
             ))}
           </div>
         )}
-      </div>
+      </ScrollArea>
     </div>
   );
 }
