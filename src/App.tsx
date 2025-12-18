@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useEditorStore } from "./lib/store";
 import EditorLayout from "./components/EditorLayout";
 import TitleBar from "./components/TitleBar";
+import CommandPalette from "./components/CommandPalette";
 
 export default function App() {
   const { fileTree, openProjectDialog } = useEditorStore();
@@ -13,18 +14,15 @@ export default function App() {
 
   return (
     <div className="flex flex-col h-screen w-screen bg-[#1e1e1e] text-white overflow-hidden">
+      <CommandPalette />
       <TitleBar />
 
       <div className="flex-1 overflow-hidden relative flex flex-col">
         {!fileTree ? (
           <div className="flex-1 flex flex-col items-center justify-center gap-6">
             <div className="text-center">
-              <h1 className="text-5xl font-bold mb-2 text-blue-500">
-                VS Code Clone
-              </h1>
-              <p className="text-gray-400 text-lg">
-                Premium Code Editing Experience
-              </p>
+              <h1 className="text-5xl font-bold mb-2 text-blue-500">MIDE</h1>
+              <p className="text-gray-400 text-lg">Professional Code Editor</p>
             </div>
 
             <div className="flex flex-col gap-3 w-64">

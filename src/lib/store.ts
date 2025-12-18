@@ -11,16 +11,45 @@ export interface OpenFile {
     isDirty: boolean;
 }
 
+export interface SearchResult {
+    file: string;
+    line: number;
+    content: string;
+}
+
+export interface RunConfiguration {
+    id: string;
+    name: string;
+    command: string;
+    args?: string[];
+    cwd?: string;
+}
+
 interface EditorState {
     fileTree: FileNode | null;
     openFiles: OpenFile[];
     activeFile: string | null;
     activeView: string; // 'explorer', 'search', etc.
     projectPath: string | null;
+    isCommandPaletteOpen: boolean;
+    isTerminalOpen: boolean;
+    searchResults: SearchResult[];
+    isSearching: boolean;
+    searchQuery: string;
+    selectedNode: { path: string; isDir: boolean } | null;
+    creationState: { type: 'file' | 'folder'; parentPath: string } | null;
+    
+    // Run Configuration State
+    runConfigurations: RunConfiguration[];
+    activeRunConfigId: string | null;
+    isRunConfigDialogOpen: boolean;
 
     setFileTree: (tree: FileNode) => void;
     setProjectPath: (path: string) => void;
     setActiveView: (view: string) => void;
+    setCommandPaletteOpen: (isOpen: boolean) => void;
+    setTerminalOpen: (isOpen: boolean) => void;
+    toggleTerminal: () => void;
     openFile: (file: OpenFile) => void;
     closeFile: (path: string) => void;
     setActiveFile: (path: string) => void;
@@ -28,6 +57,16 @@ interface EditorState {
     markFileDirty: (path: string, isDirty: boolean) => void;
     refreshTree: () => Promise<void>;
     openProjectDialog: () => Promise<void>;
+    performSearch: (query: string) => Promise<void>;
+    setSearchQuery: (query: string) => void;
+    setSelectedNode: (node: { path: string; isDir: boolean } | null) => void;
+    setCreationState: (state: { type: 'file' | 'folder'; parentPath: string } | null) => void;
+    
+    // Run Configuration Actions
+    setRunConfigurations: (configs: RunConfiguration[]) => void;
+    setActiveRunConfigId: (id: string | null) => void;
+    setRunConfigDialogOpen: (isOpen: boolean) => void;
+    addRunConfiguration: (config: RunConfiguration) => void;
 }
 
 export const useEditorStore = create<EditorState>((set, get) => ({
@@ -36,10 +75,56 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     activeFile: null,
     activeView: 'explorer',
     projectPath: null,
+    isCommandPaletteOpen: false,
+    isTerminalOpen: true,
+    searchResults: [],
+    isSearching: false,
+    searchQuery: "",
+    selectedNode: null,
+    creationState: null,
+    
+    runConfigurations: [
+        { id: 'default', name: 'Current File', command: 'run_current' }
+    ],
+    activeRunConfigId: 'default',
+    isRunConfigDialogOpen: false,
 
     setFileTree: (tree) => set({ fileTree: tree }),
     setProjectPath: (path) => set({ projectPath: path }),
     setActiveView: (view) => set({ activeView: view }),
+    setCommandPaletteOpen: (isOpen) => set({ isCommandPaletteOpen: isOpen }),
+    setTerminalOpen: (isOpen) => set({ isTerminalOpen: isOpen }),
+    toggleTerminal: () => set((state) => ({ isTerminalOpen: !state.isTerminalOpen })),
+    setSearchQuery: (query) => set({ searchQuery: query }),
+    setSelectedNode: (node) => set({ selectedNode: node }),
+    setCreationState: (state) => set({ creationState: state }),
+    
+    setRunConfigurations: (configs) => set({ runConfigurations: configs }),
+    setActiveRunConfigId: (id) => set({ activeRunConfigId: id }),
+    setRunConfigDialogOpen: (isOpen) => set({ isRunConfigDialogOpen: isOpen }),
+    addRunConfiguration: (config) => set((state) => ({ 
+        runConfigurations: [...state.runConfigurations, config],
+        activeRunConfigId: config.id 
+    })),
+
+    performSearch: async (query) => {
+        const { projectPath } = get();
+        if (!projectPath || !query.trim()) return;
+
+        set({ isSearching: true, searchQuery: query });
+        try {
+            const results = await invoke<SearchResult[]>("search_in_files", {
+                path: projectPath,
+                query
+            });
+            set({ searchResults: results });
+        } catch (e) {
+            console.error("Search failed:", e);
+            set({ searchResults: [] });
+        } finally {
+            set({ isSearching: false });
+        }
+    },
 
     refreshTree: async () => {
         const { projectPath } = get();

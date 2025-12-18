@@ -46,9 +46,16 @@ export default function ActivityBar({
         {bottomItems.map((item) => (
           <div
             key={item.id}
-            className="flex justify-center items-center h-12 cursor-pointer hover:text-white transition-colors"
+            onClick={() => onViewChange(item.id)}
+            className={`
+              relative flex justify-center items-center h-12 cursor-pointer hover:text-white transition-colors
+              ${activeView === item.id ? "text-white" : ""}
+            `}
             title={item.label}
           >
+            {activeView === item.id && (
+              <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-white" />
+            )}
             <item.icon size={24} strokeWidth={1.5} />
           </div>
         ))}

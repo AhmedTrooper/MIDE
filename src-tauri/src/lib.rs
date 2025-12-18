@@ -1,8 +1,16 @@
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::Path;
+use walkdir::WalkDir;
 
 // --- 1. Data Structure ---
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct SearchResult {
+    file: String,
+    line: usize,
+    content: String,
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct FileNode {
     name: String,
@@ -102,6 +110,35 @@ fn rename_item(old_path: String, new_path: String) -> Result<(), String> {
     fs::rename(old_path, new_path).map_err(|e| e.to_string())
 }
 
+#[tauri::command]
+fn search_in_files(path: String, query: String) -> Result<Vec<SearchResult>, String> {
+    let mut results = Vec::new();
+    let query = query.to_lowercase();
+
+    for entry in WalkDir::new(&path).into_iter().filter_map(|e| e.ok()) {
+        let path = entry.path();
+        if path.is_file() {
+            // Skip binary files or huge files if possible, for now just try read
+            if let Ok(content) = fs::read_to_string(path) {
+                for (i, line) in content.lines().enumerate() {
+                    if line.to_lowercase().contains(&query) {
+                        results.push(SearchResult {
+                            file: path.to_string_lossy().to_string(),
+                            line: i + 1,
+                            content: line.trim().to_string(),
+                        });
+                        // Limit results per file or total to avoid freezing?
+                        if results.len() > 1000 {
+                            return Ok(results);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    Ok(results)
+}
+
 // --- 4. Main Entry ---
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -115,7 +152,8 @@ pub fn run() {
             create_file,
             create_directory,
             delete_item,
-            rename_item
+            rename_item,
+            search_in_files
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

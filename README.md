@@ -1,59 +1,46 @@
-# MIDE
+# MIDE - Professional Code Editor
 
-**MIDE** is a high-performance, premium code editor built with **Tauri v2** and **React**. It aims to provide a VS Code-like experience with a focus on speed, aesthetics, and mobile responsiveness.
+MIDE is a high-performance, production-grade Integrated Development Environment (IDE) built with **Tauri v2**, **Rust**, and **React**. Designed as a lightweight yet powerful alternative to VS Code, MIDE focuses on speed, efficiency, and a premium developer experience.
 
 ## 🚀 Features
 
-- **Custom UI**: Fully custom title bar and window controls for a seamless, frameless experience.
-- **File System Integration**:
-  - Open folders and projects.
-  - Read and write files directly using Rust-powered backend.
-  - Create files and directories.
-- **Code Editing**:
-  - Powered by **Monaco Editor** (the core of VS Code).
-  - Syntax highlighting and minimap.
-- **Responsive Design**:
-  - Mobile-friendly UI with adaptive menus.
-  - Custom hamburger menu for smaller screens.
-- **State Management**: Robust state handling with **Zustand**.
+- **Blazing Fast**: Powered by Rust backend and Tauri's lightweight webview.
+- **Monaco Editor**: The same battle-tested editor engine used in VS Code.
+- **File System Integration**: Native file tree exploration, reading, and writing.
+- **Modern UI**: Sleek, dark-themed interface built with Tailwind CSS v4.
+- **Production Ready**: Robust error handling, state management with Zustand, and type safety with TypeScript.
 
-## 🛠️ Tech Stack
+## 🛠 Tech Stack
 
-- **Frontend**: React, TypeScript, Tailwind CSS, Lucide Icons
+- **Frontend**: React 19, TypeScript, Tailwind CSS v4, Framer Motion
 - **Backend**: Rust (Tauri v2)
+- **State Management**: Zustand
 - **Editor**: Monaco Editor
-- **State**: Zustand
+- **Icons**: Lucide React
 
-## 📦 Getting Started
+## 📦 Installation
 
 ### Prerequisites
+- Rust & Cargo
+- Node.js & Yarn/NPM
 
-- [Node.js](https://nodejs.org/) (v18+)
-- [Rust](https://www.rust-lang.org/) (latest stable)
-- [Yarn](https://yarnpkg.com/)
+### Development
 
-### Installation
+1. Clone the repository
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+3. Run in development mode:
+   ```bash
+   npm run tauri dev
+   ```
 
-1.  **Clone the repository:**
-    ```bash
-    git clone https://github.com/yourusername/mide.git
-    cd mide
-    ```
+## 🏗 Architecture
 
-2.  **Install dependencies:**
-    ```bash
-    yarn install
-    ```
-
-3.  **Run in Development Mode:**
-    ```bash
-    yarn tauri dev
-    ```
-
-4.  **Build for Production:**
-    ```bash
-    yarn tauri build
-    ```
+MIDE uses a hybrid architecture:
+- **Rust Core**: Handles heavy lifting like file system operations, terminal processes (planned), and native OS integrations.
+- **React Frontend**: Provides a responsive, accessible, and rich user interface.
 
 ## 🤝 Contributing
 
@@ -61,4 +48,4 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## 📄 License
 
-[MIT](LICENSE)
+MIT
