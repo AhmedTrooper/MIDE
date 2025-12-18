@@ -38,11 +38,16 @@ interface EditorState {
     searchQuery: string;
     selectedNode: { path: string; isDir: boolean } | null;
     creationState: { type: 'file' | 'folder'; parentPath: string } | null;
-    
+
     // Run Configuration State
     runConfigurations: RunConfiguration[];
     activeRunConfigId: string | null;
     isRunConfigDialogOpen: boolean;
+
+    // Terminal State
+    terminalOutput: string[];
+    appendTerminalOutput: (line: string) => void;
+    clearTerminalOutput: () => void;
 
     setFileTree: (tree: FileNode) => void;
     setProjectPath: (path: string) => void;
@@ -61,7 +66,7 @@ interface EditorState {
     setSearchQuery: (query: string) => void;
     setSelectedNode: (node: { path: string; isDir: boolean } | null) => void;
     setCreationState: (state: { type: 'file' | 'folder'; parentPath: string } | null) => void;
-    
+
     // Run Configuration Actions
     setRunConfigurations: (configs: RunConfiguration[]) => void;
     setActiveRunConfigId: (id: string | null) => void;
@@ -82,12 +87,16 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     searchQuery: "",
     selectedNode: null,
     creationState: null,
-    
+
     runConfigurations: [
-        { id: 'default', name: 'Current File', command: 'run_current' }
+        { id: 'default', name: 'Echo Hello', command: 'echo', args: ['Hello', 'World'] }
     ],
     activeRunConfigId: 'default',
     isRunConfigDialogOpen: false,
+
+    terminalOutput: [],
+    appendTerminalOutput: (line) => set((state) => ({ terminalOutput: [...state.terminalOutput, line] })),
+    clearTerminalOutput: () => set({ terminalOutput: [] }),
 
     setFileTree: (tree) => set({ fileTree: tree }),
     setProjectPath: (path) => set({ projectPath: path }),
@@ -98,13 +107,13 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     setSearchQuery: (query) => set({ searchQuery: query }),
     setSelectedNode: (node) => set({ selectedNode: node }),
     setCreationState: (state) => set({ creationState: state }),
-    
+
     setRunConfigurations: (configs) => set({ runConfigurations: configs }),
     setActiveRunConfigId: (id) => set({ activeRunConfigId: id }),
     setRunConfigDialogOpen: (isOpen) => set({ isRunConfigDialogOpen: isOpen }),
-    addRunConfiguration: (config) => set((state) => ({ 
+    addRunConfiguration: (config) => set((state) => ({
         runConfigurations: [...state.runConfigurations, config],
-        activeRunConfigId: config.id 
+        activeRunConfigId: config.id
     })),
 
     performSearch: async (query) => {

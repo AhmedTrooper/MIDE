@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { X, Plus, Trash, Save } from "lucide-react";
 import { useEditorStore, type RunConfiguration } from "../lib/store";
+import { Button } from "./ui/button";
 
 export default function RunConfigDialog() {
   const {
@@ -66,12 +67,14 @@ export default function RunConfigDialog() {
           <h2 className="text-sm font-medium text-white">
             Run/Debug Configurations
           </h2>
-          <button
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={() => setRunConfigDialogOpen(false)}
-            className="text-gray-400 hover:text-white"
+            className="h-6 w-6 text-gray-400 hover:text-white hover:bg-transparent"
           >
             <X size={18} />
-          </button>
+          </Button>
         </div>
 
         <div className="flex flex-1 overflow-hidden">
@@ -89,25 +92,28 @@ export default function RunConfigDialog() {
                   }`}
                 >
                   <span className="truncate">{config.name}</span>
-                  <button
+                  <Button
+                    variant="ghost"
+                    size="icon"
                     onClick={(e) => {
                       e.stopPropagation();
                       handleDelete(config.id);
                     }}
-                    className="opacity-0 group-hover:opacity-100 hover:text-red-400"
+                    className="h-6 w-6 opacity-0 group-hover:opacity-100 hover:text-red-400 hover:bg-transparent"
                   >
                     <Trash size={14} />
-                  </button>
+                  </Button>
                 </div>
               ))}
             </div>
             <div className="p-2 border-t border-[#333]">
-              <button
+              <Button
+                variant="ghost"
                 onClick={handleAdd}
-                className="flex items-center gap-2 text-xs text-blue-400 hover:text-blue-300 px-2 py-1"
+                className="w-full justify-start gap-2 text-xs text-blue-400 hover:text-blue-300 px-2 py-1 h-8"
               >
                 <Plus size={14} /> Add New Configuration
-              </button>
+              </Button>
             </div>
           </div>
 
@@ -186,18 +192,19 @@ export default function RunConfigDialog() {
 
         {/* Footer */}
         <div className="px-4 py-3 border-t border-[#333] flex justify-end gap-2 bg-[#1e1e1e]">
-          <button
+          <Button
+            variant="secondary"
             onClick={() => setRunConfigDialogOpen(false)}
-            className="px-4 py-1.5 rounded text-sm text-white hover:bg-[#3c3c3c] transition-colors"
+            className="h-8 text-xs bg-[#3c3c3c] hover:bg-[#4c4c4c] text-white border-none"
           >
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={handleSave}
-            className="px-4 py-1.5 rounded text-sm bg-[#007fd4] text-white hover:bg-[#006bb3] transition-colors flex items-center gap-2"
+            className="h-8 text-xs bg-[#007fd4] hover:bg-[#006bb3] text-white border-none gap-2"
           >
             <Save size={14} /> Apply & Close
-          </button>
+          </Button>
         </div>
       </div>
     </div>

@@ -11,6 +11,8 @@ import SettingsView from "./SettingsView";
 import StatusBar from "./StatusBar";
 import RunConfigDialog from "./RunConfigDialog";
 import CommandPalette from "./CommandPalette";
+import Terminal from "./Terminal";
+import GitView from "./GitView";
 
 export default function EditorLayout() {
   const {
@@ -96,6 +98,7 @@ export default function EditorLayout() {
           />
         )}
         {activeView === "search" && <SearchView />}
+        {activeView === "git" && <GitView />}
 
         {/* Main Editor Area */}
         <div className="flex-1 flex flex-col min-w-0 bg-[#1e1e1e]">
@@ -178,40 +181,7 @@ export default function EditorLayout() {
           )}
 
           {/* Terminal Panel */}
-          {isTerminalOpen && activeView !== "settings" && (
-            <div className="h-48 border-t border-[#333] bg-[#1e1e1e] flex flex-col">
-              <div className="flex items-center px-4 py-1 border-b border-[#333] gap-4 text-xs uppercase tracking-wide text-gray-400">
-                <span className="cursor-pointer hover:text-white text-white border-b border-white pb-0.5">
-                  Terminal
-                </span>
-                <span className="cursor-pointer hover:text-white">Output</span>
-                <span className="cursor-pointer hover:text-white">
-                  Problems
-                </span>
-                <div className="flex-1" />
-                <button
-                  onClick={() =>
-                    useEditorStore.getState().setTerminalOpen(false)
-                  }
-                >
-                  <X size={14} />
-                </button>
-              </div>
-              <div className="flex-1 p-2 font-mono text-sm text-gray-300 overflow-auto">
-                <div className="flex gap-2">
-                  <span className="text-green-500">➜</span>
-                  <span className="text-blue-400">~</span>
-                  <span>echo "Welcome to MIDE!"</span>
-                </div>
-                <div className="mt-1">Welcome to MIDE!</div>
-                <div className="flex gap-2 mt-1">
-                  <span className="text-green-500">➜</span>
-                  <span className="text-blue-400">~</span>
-                  <span className="animate-pulse">_</span>
-                </div>
-              </div>
-            </div>
-          )}
+          {isTerminalOpen && activeView !== "settings" && <Terminal />}
         </div>
       </div>
 

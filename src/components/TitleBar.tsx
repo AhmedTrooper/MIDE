@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import {
   Minus,
   Square,
@@ -11,6 +13,7 @@ import {
   Plus,
 } from "lucide-react";
 import { useEditorStore } from "../lib/store";
+import { Button } from "./ui/button";
 
 export default function TitleBar() {
   const [isMaximized, setIsMaximized] = useState(false);
@@ -21,6 +24,9 @@ export default function TitleBar() {
     activeRunConfigId,
     setActiveRunConfigId,
     setRunConfigDialogOpen,
+    setTerminalOpen,
+    appendTerminalOutput,
+    projectPath,
   } = useEditorStore();
   const appWindow = getCurrentWindow();
 
@@ -35,6 +41,58 @@ export default function TitleBar() {
       unlisten.then((f) => f());
     };
   }, []);
+
+  const handleRun = async () => {
+    const activeConfig = runConfigurations.find(
+      (c) => c.id === activeRunConfigId
+    );
+    if (!activeConfig) return;
+
+    setTerminalOpen(true);
+    appendTerminalOutput(
+      `> Executing: ${activeConfig.command} ${
+        activeConfig.args?.join(" ") || ""
+      }\n`
+    );
+
+    try {
+      // Listen for output
+      const unlistenData = await listen<string>(
+        `term-data-${activeConfig.id}`,
+        (event) => {
+          appendTerminalOutput(event.payload);
+        }
+      );
+
+      const unlistenExit = await listen<number>(
+        `term-exit-${activeConfig.id}`,
+        (event) => {
+          appendTerminalOutput(
+            `\n> Process exited with code ${event.payload}\n`
+          );
+          unlistenData();
+          unlistenExit();
+          unlistenError();
+        }
+      );
+
+      const unlistenError = await listen<string>(
+        `term-error-${activeConfig.id}`,
+        (event) => {
+          appendTerminalOutput(`\n> Error: ${event.payload}\n`);
+        }
+      );
+
+      await invoke("run_command", {
+        id: activeConfig.id,
+        command: activeConfig.command,
+        args: activeConfig.args || [],
+        cwd: activeConfig.cwd || projectPath, // Fallback to project root
+      });
+    } catch (err) {
+      appendTerminalOutput(`> Failed to start: ${err}\n`);
+    }
+  };
 
   const minimize = () => appWindow.minimize();
   const toggleMaximize = async () => {
@@ -106,10 +164,10 @@ export default function TitleBar() {
 
         {/* Center: Run Toolbar (JetBrains Style) */}
         <div
-          className="flex-1 flex justify-center items-center gap-3"
+          className="flex-1 flex justify-center items-center gap-3 min-w-0 px-2"
           data-tauri-drag-region
         >
-          <div className="flex items-center bg-[#2d2d2d] rounded border border-[#3e3e3e] h-6 px-2 gap-2 cursor-pointer hover:bg-[#363636] transition-colors relative group min-w-[140px] justify-between">
+          <div className="flex items-center bg-[#2d2d2d] rounded border border-[#3e3e3e] h-6 px-2 gap-2 cursor-pointer hover:bg-[#363636] transition-colors relative group min-w-[140px] justify-between shrink-0">
             <span className="text-xs text-gray-300 truncate max-w-[120px]">
               {activeConfig?.name || "Add Configuration..."}
             </span>
@@ -145,30 +203,37 @@ export default function TitleBar() {
             </div>
           </div>
 
-          <div className="flex items-center gap-1">
-            <button
-              className="p-1 hover:bg-[#3c3c3c] rounded text-green-500 transition-colors"
+          <div className="flex items-center gap-1 shrink-0">
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              className="h-7 w-7 hover:bg-[#3c3c3c] text-green-500"
               title="Run"
+              onClick={handleRun}
             >
-              <Play size={18} fill="currentColor" />
-            </button>
-            <button
-              className="p-1 hover:bg-[#3c3c3c] rounded text-red-400 transition-colors"
+              <Play size={16} fill="currentColor" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              className="h-7 w-7 hover:bg-[#3c3c3c] text-red-400"
               title="Debug"
             >
-              <Bug size={18} />
-            </button>
-            <button
-              className="p-1 hover:bg-[#3c3c3c] rounded text-gray-500 transition-colors"
+              <Bug size={16} />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              className="h-7 w-7 hover:bg-[#3c3c3c] text-gray-500"
               title="Stop"
             >
-              <Square size={18} fill="currentColor" />
-            </button>
+              <Square size={16} fill="currentColor" />
+            </Button>
           </div>
         </div>
 
         {/* Right Section: Window Controls */}
-        <div className="flex items-center h-full">
+        <div className="flex items-center h-full shrink-0">
           <div
             onClick={minimize}
             className="h-full w-11 flex items-center justify-center hover:bg-[#3c3c3c] cursor-pointer transition-colors"
