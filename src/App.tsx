@@ -1,16 +1,36 @@
 import { useEffect } from "react";
+import { invoke } from "@tauri-apps/api/core";
 import { useEditorStore } from "./lib/store";
 import EditorLayout from "./components/EditorLayout";
 import TitleBar from "./components/TitleBar";
 import CommandPalette from "./components/CommandPalette";
 
 export default function App() {
-  const { fileTree, openProjectDialog } = useEditorStore();
+  const { fileTree, openProjectDialog, openProjectByPath } = useEditorStore();
 
-  // Optional: Load a default project for dev purposes or check local storage
+  // Check for CLI arguments on startup
   useEffect(() => {
-    // You could load the last opened path here
-  }, []);
+    const checkCliArgs = async () => {
+      try {
+        const args = await invoke<string[]>("get_cli_args");
+        // Args format: [executable_path, ...user_args]
+        // Look for directory argument
+        if (args.length > 1) {
+          const dirArg = args[1];
+
+          // Only open if it's not a flag and not empty
+          if (dirArg && !dirArg.startsWith("-")) {
+            // Try to open the provided path (CLI script handles path conversion)
+            await openProjectByPath(dirArg);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to process CLI args:", err);
+      }
+    };
+
+    checkCliArgs();
+  }, [openProjectByPath]);
 
   return (
     <div className="flex flex-col h-screen w-screen bg-[#1e1e1e] text-white overflow-hidden">

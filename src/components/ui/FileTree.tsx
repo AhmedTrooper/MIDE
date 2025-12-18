@@ -9,6 +9,10 @@ import {
   FolderPlus,
   Pencil,
   Trash2,
+  Copy,
+  ExternalLink,
+  SplitSquareVertical,
+  FileText,
 } from "lucide-react";
 import { useEditorStore } from "../../lib/store";
 import { invoke } from "@tauri-apps/api/core";
@@ -51,6 +55,9 @@ const FileTreeNode = ({ node, onSelect, level = 0 }: FileTreeProps) => {
     creationState,
     setCreationState,
     refreshTree,
+    projectPath,
+    splitEditorVertical,
+    splitDirection,
   } = useEditorStore();
   const [newItemName, setNewItemName] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
@@ -143,6 +150,65 @@ const FileTreeNode = ({ node, onSelect, level = 0 }: FileTreeProps) => {
     }
   };
 
+  const handleCopyPath = async () => {
+    try {
+      await navigator.clipboard.writeText(node.path);
+    } catch (err) {
+      console.error("Failed to copy path:", err);
+    }
+  };
+
+  const handleCopyRelativePath = async () => {
+    try {
+      if (!projectPath) return;
+      const relativePath = node.path
+        .replace(projectPath, "")
+        .replace(/^[/\\]/, "");
+      await navigator.clipboard.writeText(relativePath);
+    } catch (err) {
+      console.error("Failed to copy relative path:", err);
+    }
+  };
+
+  const handleOpenToSide = () => {
+    if (!node.is_dir) {
+      if (splitDirection === "none") {
+        splitEditorVertical();
+      }
+      // Small delay to let split happen, then open file
+      setTimeout(() => {
+        onSelect(node.path);
+      }, 100);
+    }
+  };
+
+  const handleRevealInExplorer = async () => {
+    try {
+      // Use Tauri shell plugin to open file explorer
+      const { Command } = await import("@tauri-apps/plugin-shell");
+
+      // Determine the appropriate command based on OS
+      const platform = navigator.platform.toLowerCase();
+
+      if (platform.includes("win")) {
+        // Windows: open explorer and select the file
+        await Command.create("explorer", ["/select,", node.path]).execute();
+      } else if (platform.includes("mac")) {
+        // macOS: use 'open' with reveal flag
+        await Command.create("open", ["-R", node.path]).execute();
+      } else {
+        // Linux: open the parent directory
+        const separator = node.path.includes("\\") ? "\\" : "/";
+        const lastIndex = node.path.lastIndexOf(separator);
+        const parentPath =
+          lastIndex !== -1 ? node.path.substring(0, lastIndex) : node.path;
+        await Command.create("xdg-open", [parentPath]).execute();
+      }
+    } catch (err) {
+      console.error("Failed to reveal in explorer:", err);
+    }
+  };
+
   return (
     <div className="select-none text-sm font-sans">
       <ContextMenu>
@@ -188,7 +254,54 @@ const FileTreeNode = ({ node, onSelect, level = 0 }: FileTreeProps) => {
             <span className="truncate">{node.name}</span>
           </div>
         </ContextMenuTrigger>
-        <ContextMenuContent className="w-48 bg-[#252526] border-[#454545] text-gray-300">
+        <ContextMenuContent className="w-56 bg-[#252526] border-[#454545] text-gray-300">
+          {/* File-specific options */}
+          {!node.is_dir && (
+            <>
+              <ContextMenuItem
+                onClick={() => onSelect(node.path)}
+                className="focus:bg-[#094771] focus:text-white cursor-pointer"
+              >
+                <FileText className="mr-2 h-4 w-4" />
+                Open
+              </ContextMenuItem>
+              <ContextMenuItem
+                onClick={handleOpenToSide}
+                className="focus:bg-[#094771] focus:text-white cursor-pointer"
+              >
+                <SplitSquareVertical className="mr-2 h-4 w-4" />
+                Open to the Side
+              </ContextMenuItem>
+              <ContextMenuSeparator className="bg-[#454545]" />
+            </>
+          )}
+
+          {/* Common options */}
+          <ContextMenuItem
+            onClick={handleRevealInExplorer}
+            className="focus:bg-[#094771] focus:text-white cursor-pointer"
+          >
+            <ExternalLink className="mr-2 h-4 w-4" />
+            Reveal in File Explorer
+          </ContextMenuItem>
+          <ContextMenuSeparator className="bg-[#454545]" />
+
+          <ContextMenuItem
+            onClick={handleCopyPath}
+            className="focus:bg-[#094771] focus:text-white cursor-pointer"
+          >
+            <Copy className="mr-2 h-4 w-4" />
+            Copy Path
+          </ContextMenuItem>
+          <ContextMenuItem
+            onClick={handleCopyRelativePath}
+            className="focus:bg-[#094771] focus:text-white cursor-pointer"
+          >
+            <Copy className="mr-2 h-4 w-4" />
+            Copy Relative Path
+          </ContextMenuItem>
+
+          <ContextMenuSeparator className="bg-[#454545]" />
           <ContextMenuItem
             onClick={() => setIsRenameOpen(true)}
             className="focus:bg-[#094771] focus:text-white cursor-pointer"
@@ -203,6 +316,7 @@ const FileTreeNode = ({ node, onSelect, level = 0 }: FileTreeProps) => {
             <Trash2 className="mr-2 h-4 w-4" />
             Delete
           </ContextMenuItem>
+
           {node.is_dir && (
             <>
               <ContextMenuSeparator className="bg-[#454545]" />

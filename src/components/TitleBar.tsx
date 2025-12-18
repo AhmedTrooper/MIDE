@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
@@ -18,6 +18,7 @@ import { Button } from "./ui/button";
 export default function TitleBar() {
   const [isMaximized, setIsMaximized] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const mobileMenuRef = useRef<HTMLDivElement>(null);
   const {
     openProjectDialog,
     runConfigurations,
@@ -41,6 +42,25 @@ export default function TitleBar() {
       unlisten.then((f) => f());
     };
   }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        mobileMenuRef.current &&
+        !mobileMenuRef.current.contains(event.target as Node)
+      ) {
+        setIsMenuOpen(false);
+      }
+    };
+
+    if (isMenuOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isMenuOpen]);
 
   const handleRun = async () => {
     const activeConfig = runConfigurations.find(
@@ -135,7 +155,7 @@ export default function TitleBar() {
     <>
       <div
         data-tauri-drag-region
-        className="h-10 bg-[#1e1e1e] flex items-center justify-between select-none text-[13px] text-[#cccccc] w-full border-b border-[#1e1e1e] flex-shrink-0"
+        className="h-10 bg-[#1e1e1e] flex items-center justify-between select-none text-[13px] text-[#cccccc] w-full border-b border-[#1e1e1e] flex-shrink-0 relative"
       >
         {/* Left Section: Icon + Menus */}
         <div
@@ -171,11 +191,34 @@ export default function TitleBar() {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => setIsMenuOpen(true)}
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
             className="md:hidden flex items-center h-full px-2 hover:bg-[#3c3c3c] cursor-pointer rounded-none"
           >
             <Menu size={16} />
           </Button>
+
+          {/* Mobile Menu Dropdown */}
+          {isMenuOpen && (
+            <div
+              ref={mobileMenuRef}
+              className="md:hidden absolute top-10 left-0 w-48 bg-[#252526] border border-[#454545] rounded shadow-xl z-50 py-1"
+            >
+              {menuItems.map((item) => (
+                <Button
+                  key={item.label}
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    if (item.label === "File") openProjectDialog();
+                    setIsMenuOpen(false);
+                  }}
+                  className="w-full justify-start px-3 py-2 hover:bg-[#094771] cursor-pointer rounded-none text-[13px] font-normal text-[#cccccc] hover:text-white"
+                >
+                  {item.label}
+                </Button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Center: Run Toolbar (JetBrains Style) */}

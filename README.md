@@ -21,6 +21,7 @@ MIDE is a high-performance, production-grade Integrated Development Environment 
 ## 📦 Installation
 
 ### Prerequisites
+
 - Rust & Cargo
 - Node.js & Yarn/NPM
 
@@ -36,9 +37,28 @@ MIDE is a high-performance, production-grade Integrated Development Environment 
    npm run tauri dev
    ```
 
+### CLI Installation
+
+Install the `mide` command-line tool to open directories from your terminal (like `code .`):
+
+```bash
+cd cli
+./install.sh
+```
+
+Then use it anywhere:
+
+```bash
+mide .              # Open current directory
+mide /path/to/dir   # Open specific directory
+```
+
+See [cli/README.md](cli/README.md) for more details.
+
 ## 🏗 Architecture
 
 MIDE uses a hybrid architecture:
+
 - **Rust Core**: Handles heavy lifting like file system operations, terminal processes (planned), and native OS integrations.
 - **React Frontend**: Provides a responsive, accessible, and rich user interface.
 

@@ -25,11 +25,23 @@ export interface RunConfiguration {
     cwd?: string;
 }
 
+export interface EditorGroup {
+    id: string;
+    activeFile: string | null;
+}
+
+export type SplitDirection = 'none' | 'horizontal' | 'vertical';
+
 interface EditorState {
     fileTree: FileNode | null;
     openFiles: OpenFile[];
     activeFile: string | null;
     activeView: string; // 'explorer', 'search', etc.
+
+    // Split Editor State
+    splitDirection: SplitDirection;
+    editorGroups: EditorGroup[];
+    activeGroupId: string;
     projectPath: string | null;
     isCommandPaletteOpen: boolean;
     isTerminalOpen: boolean;
@@ -62,6 +74,7 @@ interface EditorState {
     markFileDirty: (path: string, isDirty: boolean) => void;
     refreshTree: () => Promise<void>;
     openProjectDialog: () => Promise<void>;
+    openProjectByPath: (path: string) => Promise<void>;
     performSearch: (query: string) => Promise<void>;
     setSearchQuery: (query: string) => void;
     setSelectedNode: (node: { path: string; isDir: boolean } | null) => void;
@@ -72,6 +85,13 @@ interface EditorState {
     setActiveRunConfigId: (id: string | null) => void;
     setRunConfigDialogOpen: (isOpen: boolean) => void;
     addRunConfiguration: (config: RunConfiguration) => void;
+
+    // Split Editor Actions
+    splitEditorHorizontal: () => void;
+    splitEditorVertical: () => void;
+    closeSplit: () => void;
+    setActiveGroup: (groupId: string) => void;
+    setGroupActiveFile: (groupId: string, filePath: string | null) => void;
 }
 
 export const useEditorStore = create<EditorState>((set, get) => ({
@@ -80,6 +100,11 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     activeFile: null,
     activeView: 'explorer',
     projectPath: null,
+
+    // Split Editor Initial State
+    splitDirection: 'none',
+    editorGroups: [{ id: 'group-1', activeFile: null }],
+    activeGroupId: 'group-1',
     isCommandPaletteOpen: false,
     isTerminalOpen: true,
     searchResults: [],
@@ -114,6 +139,50 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     addRunConfiguration: (config) => set((state) => ({
         runConfigurations: [...state.runConfigurations, config],
         activeRunConfigId: config.id
+    })),
+
+    // Split Editor Actions
+    splitEditorHorizontal: () => set((state) => {
+        if (state.splitDirection !== 'none') return state;
+        return {
+            splitDirection: 'horizontal',
+            editorGroups: [
+                { id: 'group-1', activeFile: state.activeFile },
+                { id: 'group-2', activeFile: null }
+            ],
+            activeGroupId: 'group-2'
+        };
+    }),
+
+    splitEditorVertical: () => set((state) => {
+        if (state.splitDirection !== 'none') return state;
+        return {
+            splitDirection: 'vertical',
+            editorGroups: [
+                { id: 'group-1', activeFile: state.activeFile },
+                { id: 'group-2', activeFile: null }
+            ],
+            activeGroupId: 'group-2'
+        };
+    }),
+
+    closeSplit: () => set((state) => {
+        const primaryGroup = state.editorGroups[0];
+        return {
+            splitDirection: 'none',
+            editorGroups: [{ id: 'group-1', activeFile: primaryGroup?.activeFile || state.activeFile }],
+            activeGroupId: 'group-1',
+            activeFile: primaryGroup?.activeFile || state.activeFile
+        };
+    }),
+
+    setActiveGroup: (groupId) => set({ activeGroupId: groupId }),
+
+    setGroupActiveFile: (groupId, filePath) => set((state) => ({
+        editorGroups: state.editorGroups.map(group =>
+            group.id === groupId ? { ...group, activeFile: filePath } : group
+        ),
+        activeFile: groupId === state.activeGroupId ? filePath : state.activeFile
     })),
 
     performSearch: async (query) => {
@@ -155,12 +224,20 @@ export const useEditorStore = create<EditorState>((set, get) => ({
             });
 
             if (selected && typeof selected === "string") {
-                const tree = await invoke<FileNode>("load_project_tree", {
-                    path: selected,
-                });
-                if (tree) {
-                    set({ fileTree: tree, projectPath: selected });
-                }
+                await get().openProjectByPath(selected);
+            }
+        } catch (err) {
+            console.error("Failed to open project:", err);
+        }
+    },
+
+    openProjectByPath: async (path: string) => {
+        try {
+            const tree = await invoke<FileNode>("load_project_tree", {
+                path: path,
+            });
+            if (tree) {
+                set({ fileTree: tree, projectPath: path });
             }
         } catch (err) {
             console.error("Failed to open project:", err);
@@ -169,12 +246,26 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
     openFile: (file) => set((state) => {
         const exists = state.openFiles.find((f) => f.path === file.path);
+        const newActiveFile = file.path;
+
         if (exists) {
-            return { activeFile: file.path };
+            return {
+                activeFile: newActiveFile,
+                editorGroups: state.editorGroups.map(group =>
+                    group.id === state.activeGroupId
+                        ? { ...group, activeFile: newActiveFile }
+                        : group
+                )
+            };
         }
         return {
             openFiles: [...state.openFiles, file],
-            activeFile: file.path
+            activeFile: newActiveFile,
+            editorGroups: state.editorGroups.map(group =>
+                group.id === state.activeGroupId
+                    ? { ...group, activeFile: newActiveFile }
+                    : group
+            )
         };
     }),
 

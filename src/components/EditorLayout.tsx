@@ -2,8 +2,7 @@ import { useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { useEditorStore } from "../lib/store";
 import { getLanguageFromPath } from "../lib/utils";
-import CodeEditor from "./ui/CodeEditor";
-import { X } from "lucide-react";
+import { ArrowLeftRight, ArrowUpDown } from "lucide-react";
 import ActivityBar from "./ActivityBar";
 import Sidebar from "./Sidebar";
 import SearchView from "./SearchView";
@@ -13,6 +12,7 @@ import RunConfigDialog from "./RunConfigDialog";
 import CommandPalette from "./CommandPalette";
 import Terminal from "./Terminal";
 import GitView from "./GitView";
+import SplitEditorLayout from "./SplitEditorLayout";
 import { Button } from "./ui/button";
 
 export default function EditorLayout() {
@@ -22,12 +22,13 @@ export default function EditorLayout() {
     activeFile,
     activeView,
     openFile,
-    closeFile,
     setActiveFile,
     setActiveView,
-    updateFileContent,
     markFileDirty,
     isTerminalOpen,
+    splitEditorHorizontal,
+    splitEditorVertical,
+    splitDirection,
   } = useEditorStore();
 
   const activeFileObj = openFiles.find((f) => f.path === activeFile);
@@ -68,17 +69,37 @@ export default function EditorLayout() {
     }
   };
 
-  // Keyboard shortcut for save
+  // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Save: Ctrl+S
       if ((e.ctrlKey || e.metaKey) && e.key === "s") {
         e.preventDefault();
         handleSave();
       }
+      // Split Vertical: Ctrl+\
+      if ((e.ctrlKey || e.metaKey) && e.key === "\\") {
+        e.preventDefault();
+        if (splitDirection === "none") {
+          splitEditorVertical();
+        }
+      }
+      // Split Horizontal: Ctrl+Shift+\
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === "|") {
+        e.preventDefault();
+        if (splitDirection === "none") {
+          splitEditorHorizontal();
+        }
+      }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [activeFileObj]);
+  }, [
+    activeFileObj,
+    splitDirection,
+    splitEditorHorizontal,
+    splitEditorVertical,
+  ]);
 
   return (
     <div className="flex flex-col h-full w-full bg-[#1e1e1e] text-white overflow-hidden">
@@ -107,79 +128,32 @@ export default function EditorLayout() {
             <SettingsView />
           ) : (
             <>
-              {/* Tabs */}
-              <div className="flex bg-[#252526] overflow-x-auto scrollbar-hide h-9 border-b border-[#1e1e1e]">
-                {openFiles.map((file) => (
-                  <div
-                    key={file.path}
-                    onClick={() => setActiveFile(file.path)}
-                    className={`
-                  group flex items-center gap-2 px-3 text-sm cursor-pointer border-r border-[#1e1e1e] min-w-[120px] max-w-[200px] select-none
-                  ${
-                    activeFile === file.path
-                      ? "bg-[#1e1e1e] text-white border-t-2 border-t-blue-500"
-                      : "bg-[#2d2d2d] text-gray-400 hover:bg-[#2a2d2e]"
-                  }
-                `}
+              {/* Split Editor Controls Bar */}
+              {splitDirection === "none" && openFiles.length > 0 && (
+                <div className="h-9 bg-[#252526] border-b border-[#1e1e1e] flex items-center justify-end px-2 gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={splitEditorVertical}
+                    className="h-7 w-7 hover:bg-[#3c3c3c] text-gray-400 hover:text-white"
+                    title="Split Editor Right (Ctrl+\)"
                   >
-                    <span className="truncate flex-1">{file.name}</span>
-                    <div className="flex items-center justify-center w-5 h-5">
-                      {file.isDirty ? (
-                        <div className="w-2 h-2 rounded-full bg-white group-hover:hidden" />
-                      ) : null}
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          closeFile(file.path);
-                        }}
-                        className={`h-5 w-5 opacity-0 group-hover:opacity-100 hover:bg-[#444] rounded p-0.5 ${
-                          file.isDirty ? "hidden group-hover:block" : ""
-                        }`}
-                      >
-                        <X size={14} />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                    <ArrowLeftRight size={16} />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={splitEditorHorizontal}
+                    className="h-7 w-7 hover:bg-[#3c3c3c] text-gray-400 hover:text-white"
+                    title="Split Editor Down"
+                  >
+                    <ArrowUpDown size={16} />
+                  </Button>
+                </div>
+              )}
 
-              {/* Editor */}
-              <div className="flex-1 relative">
-                {activeFileObj ? (
-                  <CodeEditor
-                    code={activeFileObj.content}
-                    language={activeFileObj.language}
-                    onChange={(value) => {
-                      if (value !== undefined) {
-                        updateFileContent(activeFileObj.path, value);
-                        markFileDirty(activeFileObj.path, true);
-                      }
-                    }}
-                  />
-                ) : (
-                  <div className="flex items-center justify-center h-full text-gray-500 bg-[#1e1e1e]">
-                    <div className="text-center">
-                      <div className="text-4xl font-bold mb-4 text-[#333]">
-                        MIDE
-                      </div>
-                      <p className="text-sm text-gray-500">
-                        Show All Commands{" "}
-                        <span className="bg-[#333] px-1 rounded text-xs">
-                          Ctrl+Shift+P
-                        </span>
-                      </p>
-                      <p className="text-sm text-gray-500 mt-2">
-                        Go to File{" "}
-                        <span className="bg-[#333] px-1 rounded text-xs">
-                          Ctrl+P
-                        </span>
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </div>
+              {/* Split Editor */}
+              <SplitEditorLayout />
             </>
           )}
 
