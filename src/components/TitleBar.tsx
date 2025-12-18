@@ -143,23 +143,27 @@ export default function TitleBar() {
             data-tauri-drag-region
           >
             {menuItems.map((item) => (
-              <div
+              <Button
                 key={item.label}
+                variant="ghost"
+                size="sm"
                 onClick={item.label === "File" ? openProjectDialog : undefined}
-                className="px-2 h-full flex items-center hover:bg-[#3c3c3c] cursor-pointer rounded-sm mx-0.5 transition-colors"
+                className="px-2 h-full flex items-center hover:bg-[#3c3c3c] cursor-pointer rounded-sm mx-0.5 transition-colors text-[13px] font-normal text-[#cccccc] hover:text-white"
               >
                 {item.label}
-              </div>
+              </Button>
             ))}
           </div>
 
           {/* Mobile Menu Icon */}
-          <div
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={() => setIsMenuOpen(true)}
-            className="md:hidden flex items-center h-full px-2 hover:bg-[#3c3c3c] cursor-pointer"
+            className="md:hidden flex items-center h-full px-2 hover:bg-[#3c3c3c] cursor-pointer rounded-none"
           >
             <Menu size={16} />
-          </div>
+          </Button>
         </div>
 
         {/* Center: Run Toolbar (JetBrains Style) */}
@@ -234,24 +238,30 @@ export default function TitleBar() {
 
         {/* Right Section: Window Controls */}
         <div className="flex items-center h-full shrink-0">
-          <div
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={minimize}
-            className="h-full w-11 flex items-center justify-center hover:bg-[#3c3c3c] cursor-pointer transition-colors"
+            className="h-full w-11 flex items-center justify-center hover:bg-[#3c3c3c] cursor-pointer transition-colors rounded-none"
           >
             <Minus size={16} />
-          </div>
-          <div
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={toggleMaximize}
-            className="h-full w-11 flex items-center justify-center hover:bg-[#3c3c3c] cursor-pointer transition-colors"
+            className="h-full w-11 flex items-center justify-center hover:bg-[#3c3c3c] cursor-pointer transition-colors rounded-none"
           >
             <Square size={14} />
-          </div>
-          <div
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={close}
-            className="h-full w-11 flex items-center justify-center hover:bg-[#c42b1c] hover:text-white cursor-pointer transition-colors"
+            className="h-full w-11 flex items-center justify-center hover:bg-[#c42b1c] hover:text-white cursor-pointer transition-colors rounded-none"
           >
             <X size={16} />
-          </div>
+          </Button>
         </div>
       </div>
     </>

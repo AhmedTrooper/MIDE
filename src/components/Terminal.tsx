@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { useEditorStore } from "../lib/store";
 import { X, Trash2 } from "lucide-react";
+import { Button } from "./ui/button";
 
 export default function Terminal() {
   const { terminalOutput, clearTerminalOutput, setTerminalOpen } =
@@ -18,20 +19,24 @@ export default function Terminal() {
           Terminal
         </span>
         <div className="flex items-center gap-2">
-          <button
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={clearTerminalOutput}
-            className="p-1 hover:bg-[#333] rounded text-gray-400 hover:text-white"
+            className="h-6 w-6 p-1 hover:bg-[#333] rounded text-gray-400 hover:text-white"
             title="Clear"
           >
             <Trash2 size={14} />
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={() => setTerminalOpen(false)}
-            className="p-1 hover:bg-[#333] rounded text-gray-400 hover:text-white"
+            className="h-6 w-6 p-1 hover:bg-[#333] rounded text-gray-400 hover:text-white"
             title="Close"
           >
             <X size={14} />
-          </button>
+          </Button>
         </div>
       </div>
       <div className="flex-1 overflow-y-auto p-2 font-mono text-sm text-gray-300">

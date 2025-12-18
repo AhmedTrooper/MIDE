@@ -1,4 +1,5 @@
 import { Files, Search, GitGraph, Box, Settings, User } from "lucide-react";
+import { Button } from "./ui/button";
 
 interface ActivityBarProps {
   activeView: string;
@@ -23,13 +24,15 @@ export default function ActivityBar({
 
   return (
     <div className="w-12 flex flex-col justify-between bg-[#333333] text-[#858585] py-2 select-none z-20">
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-2 items-center">
         {topItems.map((item) => (
-          <div
+          <Button
             key={item.id}
+            variant="ghost"
+            size="icon"
             onClick={() => onViewChange(item.id)}
             className={`
-              relative flex justify-center items-center h-12 cursor-pointer hover:text-white transition-colors
+              relative h-12 w-12 rounded-none hover:bg-transparent hover:text-white transition-colors
               ${activeView === item.id ? "text-white" : ""}
             `}
             title={item.label}
@@ -38,17 +41,19 @@ export default function ActivityBar({
               <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-white" />
             )}
             <item.icon size={24} strokeWidth={1.5} />
-          </div>
+          </Button>
         ))}
       </div>
 
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-2 items-center">
         {bottomItems.map((item) => (
-          <div
+          <Button
             key={item.id}
+            variant="ghost"
+            size="icon"
             onClick={() => onViewChange(item.id)}
             className={`
-              relative flex justify-center items-center h-12 cursor-pointer hover:text-white transition-colors
+              relative h-12 w-12 rounded-none hover:bg-transparent hover:text-white transition-colors
               ${activeView === item.id ? "text-white" : ""}
             `}
             title={item.label}
@@ -57,7 +62,7 @@ export default function ActivityBar({
               <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-white" />
             )}
             <item.icon size={24} strokeWidth={1.5} />
-          </div>
+          </Button>
         ))}
       </div>
     </div>

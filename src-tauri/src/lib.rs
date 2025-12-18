@@ -1,13 +1,13 @@
 use serde::{Deserialize, Serialize};
 use std::fs;
-use std::path::Path;
-use walkdir::WalkDir;
-use tauri::{Emitter, Window};
-use std::process::{Command, Stdio};
 use std::io::{BufRead, BufReader};
-use std::thread;
 #[cfg(target_os = "windows")]
 use std::os::windows::process::CommandExt;
+use std::path::Path;
+use std::process::{Command, Stdio};
+use std::thread;
+use tauri::{Emitter, Window};
+use walkdir::WalkDir;
 
 // --- 1. Data Structure ---
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -149,14 +149,20 @@ fn search_in_files(path: String, query: String) -> Result<Vec<SearchResult>, Str
 }
 
 #[tauri::command]
-fn run_command(window: Window, id: String, command: String, args: Vec<String>, cwd: Option<String>) {
+fn run_command(
+    window: Window,
+    id: String,
+    command: String,
+    args: Vec<String>,
+    cwd: Option<String>,
+) {
     thread::spawn(move || {
         let mut cmd = Command::new(command);
         cmd.args(args);
         if let Some(dir) = cwd {
             cmd.current_dir(dir);
         }
-        
+
         #[cfg(target_os = "windows")]
         const CREATE_NO_WINDOW: u32 = 0x08000000;
         #[cfg(target_os = "windows")]
@@ -176,7 +182,8 @@ fn run_command(window: Window, id: String, command: String, args: Vec<String>, c
                     let reader = BufReader::new(stdout);
                     for line in reader.lines() {
                         if let Ok(l) = line {
-                            let _ = window_clone_out.emit(&format!("term-data-{}", id_clone_out), l);
+                            let _ =
+                                window_clone_out.emit(&format!("term-data-{}", id_clone_out), l);
                         }
                     }
                 });
@@ -187,7 +194,8 @@ fn run_command(window: Window, id: String, command: String, args: Vec<String>, c
                     let reader = BufReader::new(stderr);
                     for line in reader.lines() {
                         if let Ok(l) = line {
-                            let _ = window_clone_err.emit(&format!("term-data-{}", id_clone_err), l);
+                            let _ =
+                                window_clone_err.emit(&format!("term-data-{}", id_clone_err), l);
                         }
                     }
                 });
@@ -210,20 +218,24 @@ fn run_command(window: Window, id: String, command: String, args: Vec<String>, c
 }
 
 #[tauri::command]
-async fn execute_shell_command(command: String, args: Vec<String>, cwd: Option<String>) -> Result<String, String> {
+async fn execute_shell_command(
+    command: String,
+    args: Vec<String>,
+    cwd: Option<String>,
+) -> Result<String, String> {
     let mut cmd = Command::new(command);
     cmd.args(args);
     if let Some(dir) = cwd {
         cmd.current_dir(dir);
     }
-    
+
     #[cfg(target_os = "windows")]
     const CREATE_NO_WINDOW: u32 = 0x08000000;
     #[cfg(target_os = "windows")]
     cmd.creation_flags(CREATE_NO_WINDOW);
 
     let output = cmd.output().map_err(|e| e.to_string())?;
-    
+
     if output.status.success() {
         Ok(String::from_utf8_lossy(&output.stdout).to_string())
     } else {
@@ -236,7 +248,7 @@ fn git_status(cwd: String) -> Result<Vec<GitFile>, String> {
     let mut cmd = Command::new("git");
     cmd.args(&["status", "--porcelain"]);
     cmd.current_dir(&cwd);
-    
+
     #[cfg(target_os = "windows")]
     const CREATE_NO_WINDOW: u32 = 0x08000000;
     #[cfg(target_os = "windows")]
@@ -252,7 +264,9 @@ fn git_status(cwd: String) -> Result<Vec<GitFile>, String> {
     let mut files = Vec::new();
 
     for line in stdout.lines() {
-        if line.len() < 4 { continue; }
+        if line.len() < 4 {
+            continue;
+        }
         let status = line[0..2].trim().to_string();
         let path = line[3..].to_string();
         files.push(GitFile { status, path });
@@ -267,12 +281,12 @@ fn git_add(cwd: String, files: Vec<String>) -> Result<(), String> {
     cmd.args(&["add"]);
     cmd.args(&files);
     cmd.current_dir(&cwd);
-    
+
     #[cfg(target_os = "windows")]
     const CREATE_NO_WINDOW: u32 = 0x08000000;
     #[cfg(target_os = "windows")]
     cmd.creation_flags(CREATE_NO_WINDOW);
-    
+
     let output = cmd.output().map_err(|e| e.to_string())?;
     if !output.status.success() {
         return Err(String::from_utf8_lossy(&output.stderr).to_string());
@@ -285,14 +299,14 @@ fn git_commit(cwd: String, message: String) -> Result<(), String> {
     let mut cmd = Command::new("git");
     cmd.args(&["commit", "-m", &message]);
     cmd.current_dir(&cwd);
-    
+
     #[cfg(target_os = "windows")]
     const CREATE_NO_WINDOW: u32 = 0x08000000;
     #[cfg(target_os = "windows")]
     cmd.creation_flags(CREATE_NO_WINDOW);
 
     let output = cmd.output().map_err(|e| e.to_string())?;
-        
+
     if !output.status.success() {
         return Err(String::from_utf8_lossy(&output.stderr).to_string());
     }

@@ -2,6 +2,7 @@ import { useEditorStore } from "../lib/store";
 import { Loader2, X } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 import { getLanguageFromPath } from "../lib/utils";
+import { Button } from "./ui/button";
 
 export default function SearchView() {
   const {
@@ -56,11 +57,14 @@ export default function SearchView() {
             className="w-full bg-[#3c3c3c] border border-[#3c3c3c] focus:border-[#007fd4] outline-none text-sm px-2 py-1 text-white placeholder-gray-400 pr-8"
           />
           {searchQuery && !isSearching && (
-            <X
-              className="absolute right-2 top-1.5 text-gray-400 hover:text-white cursor-pointer"
-              size={14}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute right-1 top-0.5 h-6 w-6 text-gray-400 hover:text-white cursor-pointer hover:bg-transparent"
               onClick={clearSearch}
-            />
+            >
+              <X size={14} />
+            </Button>
           )}
           {isSearching && (
             <Loader2

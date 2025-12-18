@@ -13,6 +13,7 @@ import RunConfigDialog from "./RunConfigDialog";
 import CommandPalette from "./CommandPalette";
 import Terminal from "./Terminal";
 import GitView from "./GitView";
+import { Button } from "./ui/button";
 
 export default function EditorLayout() {
   const {
@@ -126,17 +127,19 @@ export default function EditorLayout() {
                       {file.isDirty ? (
                         <div className="w-2 h-2 rounded-full bg-white group-hover:hidden" />
                       ) : null}
-                      <button
+                      <Button
+                        variant="ghost"
+                        size="icon"
                         onClick={(e) => {
                           e.stopPropagation();
                           closeFile(file.path);
                         }}
-                        className={`opacity-0 group-hover:opacity-100 hover:bg-[#444] rounded p-0.5 ${
+                        className={`h-5 w-5 opacity-0 group-hover:opacity-100 hover:bg-[#444] rounded p-0.5 ${
                           file.isDirty ? "hidden group-hover:block" : ""
                         }`}
                       >
                         <X size={14} />
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 ))}
