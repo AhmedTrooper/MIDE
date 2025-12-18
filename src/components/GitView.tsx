@@ -19,24 +19,41 @@ export default function GitView() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchStatus = async () => {
-    if (!projectPath) {
-      console.warn("GitView: No project path set");
-      return;
+  const isCommandNotFoundError = (err: unknown) => {
+    const msg = String(err);
+    return msg.includes("Command") && msg.toLowerCase().includes("not found");
+  };
+
+  const invokeWithFallback = async <T,>(
+    names: string[],
+    args: Record<string, unknown>
+  ): Promise<T> => {
+    let lastErr: unknown;
+    for (const name of names) {
+      try {
+        return await invoke<T>(name, args);
+      } catch (err) {
+        lastErr = err;
+        if (!isCommandNotFoundError(err)) throw err;
+      }
     }
-    console.log("GitView: Fetching status for", projectPath);
+    throw lastErr;
+  };
+
+  const fetchStatus = async () => {
+    if (!projectPath) return;
     setIsLoading(true);
     setError(null);
     try {
-      const parsedFiles = await invoke<GitFile[]>("get_git_status", {
-        cwd: projectPath,
-      });
-      console.log("GitView: Status result", parsedFiles);
+      const parsedFiles = await invokeWithFallback<GitFile[]>(
+        ["git_status_check", "git::git_status_check"],
+        { cwd: projectPath }
+      );
 
       setFiles(parsedFiles);
     } catch (err) {
       console.error("Git status error:", err);
-      setError("Failed to get git status. Is this a git repo?");
+      setError(`Git Error: ${err}`);
     } finally {
       setIsLoading(false);
     }
@@ -46,12 +63,12 @@ export default function GitView() {
     if (!projectPath || !commitMessage) return;
     setIsLoading(true);
     try {
-      await invoke("git_add", {
+      await invokeWithFallback<void>(["git_add", "git::git_add"], {
         cwd: projectPath,
         files: ["."],
       });
 
-      await invoke("git_commit", {
+      await invokeWithFallback<void>(["git_commit", "git::git_commit"], {
         cwd: projectPath,
         message: commitMessage,
       });

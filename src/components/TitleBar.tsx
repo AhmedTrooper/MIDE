@@ -48,11 +48,20 @@ export default function TitleBar() {
     );
     if (!activeConfig) return;
 
+    // Expand variables in cwd
+    let workingDir = activeConfig.cwd || projectPath;
+    if (workingDir) {
+      workingDir = workingDir.replace(
+        /\$\{workspaceFolder\}/g,
+        projectPath || ""
+      );
+    }
+
     setTerminalOpen(true);
     appendTerminalOutput(
-      `> Executing: ${activeConfig.command} ${
-        activeConfig.args?.join(" ") || ""
-      }\n`
+      `> Working Directory: ${workingDir}\n> Executing: ${
+        activeConfig.command
+      } ${activeConfig.args?.join(" ") || ""}\n`
     );
 
     try {
@@ -60,7 +69,7 @@ export default function TitleBar() {
       const unlistenData = await listen<string>(
         `term-data-${activeConfig.id}`,
         (event) => {
-          appendTerminalOutput(event.payload);
+          appendTerminalOutput(event.payload + "\n");
         }
       );
 
@@ -87,7 +96,7 @@ export default function TitleBar() {
         id: activeConfig.id,
         command: activeConfig.command,
         args: activeConfig.args || [],
-        cwd: activeConfig.cwd || projectPath, // Fallback to project root
+        cwd: workingDir,
       });
     } catch (err) {
       appendTerminalOutput(`> Failed to start: ${err}\n`);
@@ -129,7 +138,10 @@ export default function TitleBar() {
         className="h-10 bg-[#1e1e1e] flex items-center justify-between select-none text-[13px] text-[#cccccc] w-full border-b border-[#1e1e1e] flex-shrink-0"
       >
         {/* Left Section: Icon + Menus */}
-        <div className="flex items-center h-full" data-tauri-drag-region>
+        <div
+          className="flex items-center h-full shrink-0"
+          data-tauri-drag-region
+        >
           <div
             className="px-3 flex items-center justify-center h-full"
             data-tauri-drag-region
@@ -168,14 +180,14 @@ export default function TitleBar() {
 
         {/* Center: Run Toolbar (JetBrains Style) */}
         <div
-          className="flex-1 flex justify-center items-center gap-3 min-w-0 px-2"
+          className="flex justify-center items-center gap-3 px-2 shrink min-w-0"
           data-tauri-drag-region
         >
-          <div className="flex items-center bg-[#2d2d2d] rounded border border-[#3e3e3e] h-6 px-2 gap-2 cursor-pointer hover:bg-[#363636] transition-colors relative group min-w-[140px] justify-between shrink-0">
-            <span className="text-xs text-gray-300 truncate max-w-[120px]">
+          <div className="flex items-center bg-[#2d2d2d] rounded border border-[#3e3e3e] h-6 px-2 gap-2 cursor-pointer hover:bg-[#363636] transition-colors relative group w-[180px] justify-between">
+            <span className="text-xs text-gray-300 truncate flex-1 min-w-0">
               {activeConfig?.name || "Add Configuration..."}
             </span>
-            <ChevronDown size={12} className="text-gray-500" />
+            <ChevronDown size={12} className="text-gray-500 shrink-0" />
 
             {/* Dropdown Menu */}
             <div className="absolute top-full left-0 mt-1 w-56 bg-[#252526] border border-[#454545] rounded shadow-xl hidden group-hover:block z-50 py-1">

@@ -4,8 +4,7 @@ use std::os::windows::process::CommandExt;
 use std::process::Command;
 
 #[tauri::command]
-pub fn get_git_status(cwd: String) -> Result<Vec<GitFile>, String> {
-    println!("Backend: get_git_status called with cwd: '{}'", cwd);
+pub fn git_status_check(cwd: String) -> Result<Vec<GitFile>, String> {
     let mut cmd = Command::new("git");
     cmd.args(&["status", "--porcelain"]);
     cmd.current_dir(&cwd);
