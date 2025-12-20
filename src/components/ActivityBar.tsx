@@ -1,5 +1,6 @@
 import { Files, Search, GitGraph, Box, Settings, User } from "lucide-react";
 import { Button } from "./ui/button";
+import { useEditorStore } from "../lib/store";
 
 interface ActivityBarProps {
   activeView: string;
@@ -10,6 +11,21 @@ export default function ActivityBar({
   activeView,
   onViewChange,
 }: ActivityBarProps) {
+  const { isSidebarCollapsed, toggleSidebar, setSidebarCollapsed } =
+    useEditorStore();
+
+  const handleViewClick = (viewId: string) => {
+    // If clicking the same active view, toggle sidebar
+    if (activeView === viewId && !isSidebarCollapsed) {
+      toggleSidebar();
+    } else {
+      // If switching views or expanding collapsed sidebar
+      if (isSidebarCollapsed) {
+        setSidebarCollapsed(false);
+      }
+      onViewChange(viewId);
+    }
+  };
   const topItems = [
     { id: "explorer", icon: Files, label: "Explorer" },
     { id: "search", icon: Search, label: "Search" },
@@ -30,7 +46,7 @@ export default function ActivityBar({
             key={item.id}
             variant="ghost"
             size="icon"
-            onClick={() => onViewChange(item.id)}
+            onClick={() => handleViewClick(item.id)}
             className={`
               relative h-12 w-12 rounded-none hover:bg-transparent hover:text-white transition-colors
               ${activeView === item.id ? "text-white" : ""}
@@ -51,7 +67,7 @@ export default function ActivityBar({
             key={item.id}
             variant="ghost"
             size="icon"
-            onClick={() => onViewChange(item.id)}
+            onClick={() => handleViewClick(item.id)}
             className={`
               relative h-12 w-12 rounded-none hover:bg-transparent hover:text-white transition-colors
               ${activeView === item.id ? "text-white" : ""}

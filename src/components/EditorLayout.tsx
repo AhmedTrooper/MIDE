@@ -26,6 +26,8 @@ export default function EditorLayout() {
     setActiveView,
     markFileDirty,
     isTerminalOpen,
+    isSidebarCollapsed,
+    toggleSidebar,
     splitEditorHorizontal,
     splitEditorVertical,
     splitDirection,
@@ -77,6 +79,28 @@ export default function EditorLayout() {
         e.preventDefault();
         handleSave();
       }
+      // Find: Ctrl+F
+      if ((e.ctrlKey || e.metaKey) && e.key === "f" && !e.shiftKey) {
+        e.preventDefault();
+        const { setFindWidgetOpen, setFindReplaceMode } =
+          useEditorStore.getState();
+        setFindReplaceMode(false);
+        setFindWidgetOpen(true);
+      }
+      // Find & Replace: Ctrl+H
+      if ((e.ctrlKey || e.metaKey) && e.key === "h") {
+        e.preventDefault();
+        const { setFindWidgetOpen, setFindReplaceMode } =
+          useEditorStore.getState();
+        setFindReplaceMode(true);
+        setFindWidgetOpen(true);
+      }
+      // Toggle Sidebar: Ctrl+B
+      if ((e.ctrlKey || e.metaKey) && e.key === "b") {
+        e.preventDefault();
+        const { toggleSidebar } = useEditorStore.getState();
+        toggleSidebar();
+      }
       // Split Vertical: Ctrl+\
       if ((e.ctrlKey || e.metaKey) && e.key === "\\") {
         e.preventDefault();
@@ -111,7 +135,7 @@ export default function EditorLayout() {
         <ActivityBar activeView={activeView} onViewChange={setActiveView} />
 
         {/* Sidebar Area */}
-        {activeView === "explorer" && (
+        {activeView === "explorer" && !isSidebarCollapsed && (
           <Sidebar
             title="EXPLORER"
             fileTree={fileTree}
@@ -119,8 +143,8 @@ export default function EditorLayout() {
             isVisible={true}
           />
         )}
-        {activeView === "search" && <SearchView />}
-        {activeView === "git" && <GitView />}
+        {activeView === "search" && !isSidebarCollapsed && <SearchView />}
+        {activeView === "git" && !isSidebarCollapsed && <GitView />}
 
         {/* Main Editor Area */}
         <div className="flex-1 flex flex-col min-w-0 bg-[#1e1e1e]">

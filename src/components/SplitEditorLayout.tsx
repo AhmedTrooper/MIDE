@@ -1,5 +1,6 @@
 import { useEditorStore } from "../lib/store";
-import CodeEditor from "./ui/CodeEditor";
+import CodeEditor, { type CodeEditorHandle } from "./ui/CodeEditor";
+import FindReplaceWidget, { type FindOptions } from "./FindReplaceWidget";
 import { Button } from "./ui/button";
 import { X, ArrowLeftRight, ArrowUpDown, XCircle } from "lucide-react";
 import {
@@ -8,6 +9,7 @@ import {
   ResizableHandle,
 } from "./ui/resizable";
 import { motion } from "motion/react";
+import { useRef, useState } from "react";
 
 interface EditorPaneProps {
   groupId: string;
@@ -24,11 +26,64 @@ function EditorPane({ groupId }: EditorPaneProps) {
     updateFileContent,
     markFileDirty,
     splitDirection,
+    isFindWidgetOpen,
+    isFindReplaceMode,
+    setFindWidgetOpen,
   } = useEditorStore();
+
+  const editorRef = useRef<CodeEditorHandle>(null);
+  const [matchCount, setMatchCount] = useState<{
+    current: number;
+    total: number;
+  }>();
 
   const group = editorGroups.find((g) => g.id === groupId);
   const activeFileObj = openFiles.find((f) => f.path === group?.activeFile);
   const isActive = activeGroupId === groupId;
+
+  const handleFind = (query: string, options: FindOptions) => {
+    const editor = editorRef.current?.getEditor();
+    if (!editor) return;
+
+    editor.trigger("find", "actions.find", {
+      searchString: query,
+      matchCase: options.caseSensitive,
+      wholeWord: options.wholeWord,
+      isRegex: options.regex,
+    });
+  };
+
+  const handleFindNext = () => {
+    const editor = editorRef.current?.getEditor();
+    if (editor) {
+      editor.trigger("find", "editor.action.nextMatchFindAction", null);
+    }
+  };
+
+  const handleFindPrevious = () => {
+    const editor = editorRef.current?.getEditor();
+    if (editor) {
+      editor.trigger("find", "editor.action.previousMatchFindAction", null);
+    }
+  };
+
+  const handleReplace = (replacement: string) => {
+    const editor = editorRef.current?.getEditor();
+    if (editor) {
+      editor.trigger("replace", "editor.action.replaceOne", {
+        replaceString: replacement,
+      });
+    }
+  };
+
+  const handleReplaceAll = (replacement: string) => {
+    const editor = editorRef.current?.getEditor();
+    if (editor) {
+      editor.trigger("replace", "editor.action.replaceAll", {
+        replaceString: replacement,
+      });
+    }
+  };
 
   return (
     <div
@@ -60,10 +115,10 @@ function EditorPane({ groupId }: EditorPaneProps) {
             `}
           >
             <span className="truncate flex-1">{file.name}</span>
-            <div className="flex items-center justify-center w-5 h-5">
-              {file.isDirty ? (
-                <div className="w-2 h-2 rounded-full bg-white group-hover:hidden" />
-              ) : null}
+            <div className="flex items-center justify-center w-5 h-5 relative">
+              {file.isDirty && (
+                <div className="w-2 h-2 rounded-full bg-white absolute group-hover:opacity-0" />
+              )}
               <Button
                 variant="ghost"
                 size="icon"
@@ -71,9 +126,7 @@ function EditorPane({ groupId }: EditorPaneProps) {
                   e.stopPropagation();
                   closeFile(file.path);
                 }}
-                className={`h-5 w-5 opacity-0 group-hover:opacity-100 hover:bg-[#444] rounded p-0.5 ${
-                  file.isDirty ? "hidden group-hover:block" : ""
-                }`}
+                className="h-5 w-5 hover:bg-[#444] rounded p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
               >
                 <X size={14} />
               </Button>
@@ -84,8 +137,22 @@ function EditorPane({ groupId }: EditorPaneProps) {
 
       {/* Editor */}
       <div className="flex-1 relative">
+        {isActive && isFindWidgetOpen && (
+          <FindReplaceWidget
+            isOpen={isFindWidgetOpen}
+            isReplaceMode={isFindReplaceMode}
+            onClose={() => setFindWidgetOpen(false)}
+            onFind={handleFind}
+            onFindNext={handleFindNext}
+            onFindPrevious={handleFindPrevious}
+            onReplace={handleReplace}
+            onReplaceAll={handleReplaceAll}
+            matchCount={matchCount}
+          />
+        )}
         {activeFileObj ? (
           <CodeEditor
+            ref={editorRef}
             code={activeFileObj.content}
             language={activeFileObj.language}
             onChange={(value) => {

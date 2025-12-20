@@ -1,8 +1,10 @@
+mod adb;
 mod filesystem;
 mod git;
 mod models;
 mod terminal;
 
+use adb::{adb_connect, adb_devices, adb_disconnect, emulator_list_avds, emulator_start};
 use filesystem::{
     create_directory, create_file, delete_item, load_project_tree, read_file_content, rename_item,
     save_file_content, search_in_files,
@@ -36,7 +38,12 @@ pub fn run() {
             git_status_check,
             git_add,
             git_commit,
-            get_cli_args
+            get_cli_args,
+            adb_devices,
+            adb_connect,
+            adb_disconnect,
+            emulator_list_avds,
+            emulator_start
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

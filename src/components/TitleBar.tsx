@@ -14,11 +14,17 @@ import {
 } from "lucide-react";
 import { useEditorStore } from "../lib/store";
 import { Button } from "./ui/button";
+import { cn } from "../lib/utils";
+import AdbWidget from "./AdbWidget";
 
 export default function TitleBar() {
   const [isMaximized, setIsMaximized] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [activeMenuDropdown, setActiveMenuDropdown] = useState<string | null>(
+    null
+  );
   const mobileMenuRef = useRef<HTMLDivElement>(null);
+  const menuDropdownRef = useRef<HTMLDivElement>(null);
   const {
     openProjectDialog,
     runConfigurations,
@@ -51,16 +57,22 @@ export default function TitleBar() {
       ) {
         setIsMenuOpen(false);
       }
+      if (
+        menuDropdownRef.current &&
+        !menuDropdownRef.current.contains(event.target as Node)
+      ) {
+        setActiveMenuDropdown(null);
+      }
     };
 
-    if (isMenuOpen) {
+    if (isMenuOpen || activeMenuDropdown) {
       document.addEventListener("mousedown", handleClickOutside);
     }
 
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [isMenuOpen]);
+  }, [isMenuOpen, activeMenuDropdown]);
 
   const handleRun = async () => {
     const activeConfig = runConfigurations.find(
@@ -137,14 +149,91 @@ export default function TitleBar() {
   const close = () => appWindow.close();
 
   const menuItems = [
-    { label: "File", action: () => {} },
-    { label: "Edit", action: () => {} },
-    { label: "Selection", action: () => {} },
-    { label: "View", action: () => {} },
-    { label: "Go", action: () => {} },
-    { label: "Run", action: () => {} },
-    { label: "Terminal", action: () => {} },
-    { label: "Help", action: () => {} },
+    {
+      label: "File",
+      items: [
+        {
+          label: "New Text File",
+          shortcut: "Ctrl+N",
+          action: () => console.log("New file"),
+        },
+        {
+          label: "New File...",
+          shortcut: "",
+          action: () => console.log("New file..."),
+        },
+        {
+          label: "New Window",
+          shortcut: "Ctrl+Shift+N",
+          action: () => console.log("New window"),
+        },
+        { type: "separator" },
+        {
+          label: "Open File...",
+          shortcut: "Ctrl+O",
+          action: () => console.log("Open file"),
+        },
+        {
+          label: "Open Folder...",
+          shortcut: "Ctrl+K Ctrl+O",
+          action: openProjectDialog,
+        },
+        {
+          label: "Open Recent",
+          shortcut: "",
+          action: () => console.log("Open recent"),
+        },
+        { type: "separator" },
+        {
+          label: "Save",
+          shortcut: "Ctrl+S",
+          action: () => console.log("Save"),
+        },
+        {
+          label: "Save As...",
+          shortcut: "Ctrl+Shift+S",
+          action: () => console.log("Save as"),
+        },
+        {
+          label: "Save All",
+          shortcut: "",
+          action: () => console.log("Save all"),
+        },
+        { type: "separator" },
+        {
+          label: "Auto Save",
+          shortcut: "",
+          action: () => console.log("Auto save"),
+        },
+        { type: "separator" },
+        {
+          label: "Preferences",
+          shortcut: "",
+          action: () => console.log("Preferences"),
+        },
+        { type: "separator" },
+        {
+          label: "Close Editor",
+          shortcut: "Ctrl+W",
+          action: () => console.log("Close editor"),
+        },
+        {
+          label: "Close Folder",
+          shortcut: "Ctrl+K F",
+          action: () => console.log("Close folder"),
+        },
+        { label: "Close Window", shortcut: "", action: close },
+        { type: "separator" },
+        { label: "Exit", shortcut: "", action: close },
+      ],
+    },
+    { label: "Edit", items: [] },
+    { label: "Selection", items: [] },
+    { label: "View", items: [] },
+    { label: "Go", items: [] },
+    { label: "Run", items: [] },
+    { label: "Terminal", items: [] },
+    { label: "Help", items: [] },
   ];
 
   const activeConfig =
@@ -174,16 +263,60 @@ export default function TitleBar() {
             className="hidden md:flex items-center h-full"
             data-tauri-drag-region
           >
-            {menuItems.map((item) => (
-              <Button
-                key={item.label}
-                variant="ghost"
-                size="sm"
-                onClick={item.label === "File" ? openProjectDialog : undefined}
-                className="px-2 h-full flex items-center hover:bg-[#3c3c3c] cursor-pointer rounded-sm mx-0.5 transition-colors text-[13px] font-normal text-[#cccccc] hover:text-white"
-              >
-                {item.label}
-              </Button>
+            {menuItems.map((menu) => (
+              <div key={menu.label} className="relative h-full">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() =>
+                    setActiveMenuDropdown(
+                      activeMenuDropdown === menu.label ? null : menu.label
+                    )
+                  }
+                  className={cn(
+                    "px-2 h-full flex items-center hover:bg-[#3c3c3c] cursor-pointer rounded-sm mx-0.5 transition-colors text-[13px] font-normal text-[#cccccc] hover:text-white",
+                    activeMenuDropdown === menu.label && "bg-[#3c3c3c]"
+                  )}
+                >
+                  {menu.label}
+                </Button>
+
+                {/* Dropdown Menu */}
+                {activeMenuDropdown === menu.label && menu.items.length > 0 && (
+                  <div
+                    ref={menuDropdownRef}
+                    className="absolute top-full left-0 mt-0 w-64 bg-[#252526] border border-[#454545] rounded shadow-xl z-50 py-1"
+                  >
+                    {menu.items.map((item: any, index: number) => {
+                      if (item.type === "separator") {
+                        return (
+                          <div
+                            key={`sep-${index}`}
+                            className="border-t border-[#3e3e3e] my-1"
+                          />
+                        );
+                      }
+                      return (
+                        <div
+                          key={item.label}
+                          className="px-3 py-1.5 hover:bg-[#094771] text-xs text-gray-300 cursor-pointer flex justify-between items-center"
+                          onClick={() => {
+                            item.action();
+                            setActiveMenuDropdown(null);
+                          }}
+                        >
+                          <span>{item.label}</span>
+                          {item.shortcut && (
+                            <span className="text-[10px] text-gray-500 ml-6">
+                              {item.shortcut}
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             ))}
           </div>
 
@@ -289,6 +422,11 @@ export default function TitleBar() {
               <Square size={16} fill="currentColor" />
             </Button>
           </div>
+        </div>
+
+        {/* ADB Widget */}
+        <div className="flex items-center px-2" data-tauri-drag-region>
+          <AdbWidget />
         </div>
 
         {/* Right Section: Window Controls */}

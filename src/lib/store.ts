@@ -45,6 +45,9 @@ interface EditorState {
     projectPath: string | null;
     isCommandPaletteOpen: boolean;
     isTerminalOpen: boolean;
+    isSidebarCollapsed: boolean;
+    isFindWidgetOpen: boolean;
+    isFindReplaceMode: boolean;
     searchResults: SearchResult[];
     isSearching: boolean;
     searchQuery: string;
@@ -61,11 +64,21 @@ interface EditorState {
     appendTerminalOutput: (line: string) => void;
     clearTerminalOutput: () => void;
 
+    // ADB State
+    adbDevices: string[];
+    setAdbDevices: (devices: string[]) => void;
+    avdList: string[];
+    setAvdList: (avds: string[]) => void;
+
     setFileTree: (tree: FileNode) => void;
     setProjectPath: (path: string) => void;
     setActiveView: (view: string) => void;
     setCommandPaletteOpen: (isOpen: boolean) => void;
     setTerminalOpen: (isOpen: boolean) => void;
+    setSidebarCollapsed: (isCollapsed: boolean) => void;
+    toggleSidebar: () => void;
+    setFindWidgetOpen: (isOpen: boolean) => void;
+    setFindReplaceMode: (isReplace: boolean) => void;
     toggleTerminal: () => void;
     openFile: (file: OpenFile) => void;
     closeFile: (path: string) => void;
@@ -107,6 +120,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     activeGroupId: 'group-1',
     isCommandPaletteOpen: false,
     isTerminalOpen: true,
+    isSidebarCollapsed: false,
+    isFindWidgetOpen: false,
+    isFindReplaceMode: false,
     searchResults: [],
     isSearching: false,
     searchQuery: "",
@@ -123,11 +139,20 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     appendTerminalOutput: (line) => set((state) => ({ terminalOutput: [...state.terminalOutput, line] })),
     clearTerminalOutput: () => set({ terminalOutput: [] }),
 
+    adbDevices: [],
+    setAdbDevices: (devices) => set({ adbDevices: devices }),
+    avdList: [],
+    setAvdList: (avds) => set({ avdList: avds }),
+
     setFileTree: (tree) => set({ fileTree: tree }),
     setProjectPath: (path) => set({ projectPath: path }),
     setActiveView: (view) => set({ activeView: view }),
     setCommandPaletteOpen: (isOpen) => set({ isCommandPaletteOpen: isOpen }),
     setTerminalOpen: (isOpen) => set({ isTerminalOpen: isOpen }),
+    setSidebarCollapsed: (isCollapsed) => set({ isSidebarCollapsed: isCollapsed }),
+    toggleSidebar: () => set((state) => ({ isSidebarCollapsed: !state.isSidebarCollapsed })),
+    setFindWidgetOpen: (isOpen) => set({ isFindWidgetOpen: isOpen }),
+    setFindReplaceMode: (isReplace) => set({ isFindReplaceMode: isReplace }),
     toggleTerminal: () => set((state) => ({ isTerminalOpen: !state.isTerminalOpen })),
     setSearchQuery: (query) => set({ searchQuery: query }),
     setSelectedNode: (node) => set({ selectedNode: node }),
@@ -283,7 +308,14 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         };
     }),
 
-    setActiveFile: (path) => set({ activeFile: path }),
+    setActiveFile: (path) => set((state) => ({
+        activeFile: path,
+        editorGroups: state.editorGroups.map(group =>
+            group.id === state.activeGroupId
+                ? { ...group, activeFile: path }
+                : group
+        )
+    })),
 
     updateFileContent: (path, content) => set((state) => ({
         openFiles: state.openFiles.map((f) =>
