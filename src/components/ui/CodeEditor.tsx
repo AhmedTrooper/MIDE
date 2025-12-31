@@ -1,6 +1,27 @@
-import Editor, { type OnMount } from "@monaco-editor/react";
+import Editor, { type OnMount, loader } from "@monaco-editor/react";
 import { useSettingsStore } from "../../lib/settingsStore";
 import { useRef, useImperativeHandle, forwardRef, useEffect } from "react";
+
+// Configure Monaco to work offline and suppress source map warnings
+loader.config({
+  "vs/nls": {
+    availableLanguages: {
+      "*": "",
+    },
+  },
+});
+
+// Suppress console errors for missing source maps
+const originalConsoleError = console.error;
+console.error = (...args: any[]) => {
+  if (
+    typeof args[0] === "string" &&
+    (args[0].includes("loader.js.map") || args[0].includes("min-maps"))
+  ) {
+    return;
+  }
+  originalConsoleError.apply(console, args);
+};
 
 interface CodeEditorProps {
   code: string;

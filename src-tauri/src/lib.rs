@@ -9,7 +9,12 @@ use filesystem::{
     create_directory, create_file, delete_item, load_project_tree, read_file_content, rename_item,
     save_file_content, search_in_files,
 };
-use git::{git_add, git_commit, git_status_check};
+use git::{
+    git_add, git_add_remote, git_branches, git_checkout_branch, git_clone, git_commit,
+    git_commit_amend, git_create_branch, git_delete_branch, git_diff, git_discard, git_fetch,
+    git_init, git_log, git_merge, git_pull, git_push, git_remotes, git_remove_remote, git_stash,
+    git_stash_list, git_stash_pop, git_status_check, git_status_full, git_unstage,
+};
 use std::env;
 use terminal::{execute_shell_command, run_command};
 
@@ -36,8 +41,30 @@ pub fn run() {
             run_command,
             execute_shell_command,
             git_status_check,
+            git_status_full,
             git_add,
+            git_unstage,
+            git_discard,
             git_commit,
+            git_commit_amend,
+            git_diff,
+            git_log,
+            git_branches,
+            git_create_branch,
+            git_checkout_branch,
+            git_delete_branch,
+            git_merge,
+            git_pull,
+            git_push,
+            git_fetch,
+            git_remotes,
+            git_add_remote,
+            git_remove_remote,
+            git_stash,
+            git_stash_pop,
+            git_stash_list,
+            git_init,
+            git_clone,
             get_cli_args,
             adb_devices,
             adb_connect,
