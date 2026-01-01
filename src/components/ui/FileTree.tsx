@@ -49,6 +49,8 @@ interface FileTreeProps {
 
 const FileTreeNode = ({ node, onSelect, level = 0 }: FileTreeProps) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [children, setChildren] = useState<FileNode[]>(node.children || []);
+  const [isLoading, setIsLoading] = useState(false);
   const {
     selectedNode,
     setSelectedNode,
@@ -62,6 +64,13 @@ const FileTreeNode = ({ node, onSelect, level = 0 }: FileTreeProps) => {
   const [newItemName, setNewItemName] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // Update children when node prop changes (e.g. after refresh)
+  useEffect(() => {
+    if (node.children) {
+      setChildren(node.children);
+    }
+  }, [node.children]);
+
   // Dialog states
   const [isRenameOpen, setIsRenameOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
@@ -73,7 +82,9 @@ const FileTreeNode = ({ node, onSelect, level = 0 }: FileTreeProps) => {
   // Auto-expand if creating inside this folder
   useEffect(() => {
     if (isCreatingHere && node.is_dir) {
-      setIsOpen(true);
+      if (!isOpen) {
+        handleToggle();
+      }
       // Focus input after render
       setTimeout(() => {
         if (inputRef.current) inputRef.current.focus();
@@ -81,12 +92,37 @@ const FileTreeNode = ({ node, onSelect, level = 0 }: FileTreeProps) => {
     }
   }, [isCreatingHere, node.is_dir]);
 
+  const handleToggle = async () => {
+    if (!node.is_dir) return;
+
+    if (!isOpen) {
+      // Opening
+      if (children.length === 0 && !isLoading) {
+        setIsLoading(true);
+        try {
+          const loadedChildren = await invoke<FileNode[]>("read_dir", {
+            path: node.path,
+          });
+          setChildren(loadedChildren);
+        } catch (err) {
+          console.error("Failed to load directory:", err);
+        } finally {
+          setIsLoading(false);
+        }
+      }
+      setIsOpen(true);
+    } else {
+      // Closing
+      setIsOpen(false);
+    }
+  };
+
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     setSelectedNode({ path: node.path, isDir: node.is_dir });
 
     if (node.is_dir) {
-      setIsOpen(!isOpen);
+      handleToggle();
     } else {
       onSelect(node.path);
     }
@@ -445,7 +481,7 @@ const FileTreeNode = ({ node, onSelect, level = 0 }: FileTreeProps) => {
             </div>
           )}
 
-          {node.children?.map((child) => (
+          {children.map((child) => (
             <FileTreeNode
               key={child.path}
               node={child}

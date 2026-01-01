@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { invoke } from "@tauri-apps/api/core";
-import { open } from "@tauri-apps/plugin-dialog";
+import { open, confirm } from "@tauri-apps/plugin-dialog";
 import { type FileNode } from '../components/ui/FileTree';
 import { pluginEvents } from './pluginStore';
 
@@ -80,6 +80,7 @@ interface EditorState {
     appendToTerminal: (id: string, line: string) => void;
     clearTerminal: (id: string) => void;
     updateTerminalName: (id: string, name: string) => void;
+    updateTerminalCwd: (id: string, cwd: string) => void;
     activateVenvInTerminal: (id: string, venvPath: string) => void;
     setTerminalRunning: (id: string, isRunning: boolean) => void;
 
@@ -88,6 +89,11 @@ interface EditorState {
     setAdbDevices: (devices: string[]) => void;
     avdList: string[];
     setAvdList: (avds: string[]) => void;
+
+    // Recent Projects
+    recentProjects: string[];
+    addRecentProject: (path: string) => void;
+    removeRecentProject: (path: string) => void;
 
     setFileTree: (tree: FileNode) => void;
     setProjectPath: (path: string) => void;
@@ -131,6 +137,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     activeFile: null,
     activeView: 'explorer',
     projectPath: null,
+
+    recentProjects: JSON.parse(localStorage.getItem('recentProjects') || '[]'),
 
     // Split Editor Initial State
     splitDirection: 'none',
@@ -216,6 +224,12 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     updateTerminalName: (id, name) => set((state) => ({
         terminals: state.terminals.map(t =>
             t.id === id ? { ...t, name } : t
+        ),
+    })),
+
+    updateTerminalCwd: (id, cwd) => set((state) => ({
+        terminals: state.terminals.map(t =>
+            t.id === id ? { ...t, cwd } : t
         ),
     })),
 
@@ -353,9 +367,17 @@ export const useEditorStore = create<EditorState>((set, get) => ({
             });
             if (tree) {
                 set({ fileTree: tree, projectPath: path });
+                get().addRecentProject(path);
             }
         } catch (err) {
             console.error("Failed to open project:", err);
+            const shouldRemove = await confirm(
+                `The project at "${path}" could not be opened. It may have been moved or deleted.\n\nDo you want to remove it from the recent list?`,
+                { title: "Project Not Found", kind: 'warning' }
+            );
+            if (shouldRemove) {
+                get().removeRecentProject(path);
+            }
         }
     },
 
@@ -463,5 +485,17 @@ export const useEditorStore = create<EditorState>((set, get) => ({
                     : group
             )
         };
+    }),
+
+    addRecentProject: (path) => set((state) => {
+        const newRecent = [path, ...state.recentProjects.filter(p => p !== path)].slice(0, 10);
+        localStorage.setItem('recentProjects', JSON.stringify(newRecent));
+        return { recentProjects: newRecent };
+    }),
+
+    removeRecentProject: (path) => set((state) => {
+        const newRecent = state.recentProjects.filter(p => p !== path);
+        localStorage.setItem('recentProjects', JSON.stringify(newRecent));
+        return { recentProjects: newRecent };
     }),
 }));

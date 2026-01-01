@@ -128,8 +128,29 @@ pub fn run_command(
     cwd: Option<String>,
 ) {
     thread::spawn(move || {
-        let mut cmd = Command::new(command);
-        cmd.args(args);
+        // Construct the shell command
+        let (shell, shell_args) = if cfg!(target_os = "windows") {
+            ("powershell", vec!["-Command"])
+        } else {
+            ("bash", vec!["-c"])
+        };
+
+        // Reconstruct the full command string properly quoting arguments if needed
+        // For simplicity, we'll join with spaces, but a robust solution would escape
+        let mut full_cmd = command;
+        for arg in args {
+            full_cmd.push_str(" ");
+            if arg.contains(" ") {
+                full_cmd.push_str(&format!("\"{}\"", arg));
+            } else {
+                full_cmd.push_str(&arg);
+            }
+        }
+
+        let mut cmd = Command::new(shell);
+        cmd.args(shell_args);
+        cmd.arg(&full_cmd);
+
         if let Some(dir) = cwd {
             cmd.current_dir(dir);
         }
@@ -156,7 +177,7 @@ pub fn run_command(
 
                 let window_clone_out = window.clone();
                 let id_clone_out = id.clone();
-                thread::spawn(move || {
+                let stdout_handle = thread::spawn(move || {
                     let reader = BufReader::new(stdout);
                     for line in reader.lines() {
                         if let Ok(l) = line {
@@ -168,7 +189,7 @@ pub fn run_command(
 
                 let window_clone_err = window.clone();
                 let id_clone_err = id.clone();
-                thread::spawn(move || {
+                let stderr_handle = thread::spawn(move || {
                     let reader = BufReader::new(stderr);
                     for line in reader.lines() {
                         if let Ok(l) = line {
@@ -179,6 +200,10 @@ pub fn run_command(
                 });
 
                 let status = child.wait();
+
+                // Wait for output threads to finish to ensure all data is sent before exit
+                let _ = stdout_handle.join();
+                let _ = stderr_handle.join();
 
                 // Remove from tracking
                 if let Ok(mut processes) = TERMINAL_PROCESSES.lock() {

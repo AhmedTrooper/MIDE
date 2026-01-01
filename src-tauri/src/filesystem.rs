@@ -4,40 +4,17 @@ use std::path::Path;
 use walkdir::WalkDir;
 
 // --- Recursive Logic ---
-fn get_file_tree_recursive(path: &Path) -> Option<FileNode> {
+fn get_file_node(path: &Path) -> Option<FileNode> {
     let metadata = fs::metadata(path).ok()?;
     let name = path.file_name()?.to_string_lossy().to_string();
     let path_str = path.to_string_lossy().to_string();
     let is_dir = metadata.is_dir();
 
-    let mut children = None;
-
-    if is_dir {
-        let mut child_nodes = Vec::new();
-        if let Ok(entries) = fs::read_dir(path) {
-            for entry in entries.flatten() {
-                let entry_path = entry.path();
-
-                // Show all files and folders including hidden ones (.git, .github, etc.)
-
-                if let Some(node) = get_file_tree_recursive(&entry_path) {
-                    child_nodes.push(node);
-                }
-            }
-        }
-        // Sort: Folders first
-        child_nodes.sort_by(|a, b| b.is_dir.cmp(&a.is_dir).then(a.name.cmp(&b.name)));
-
-        if !child_nodes.is_empty() {
-            children = Some(child_nodes);
-        }
-    }
-
     Some(FileNode {
         name,
         path: path_str,
         is_dir,
-        children,
+        children: None,
     })
 }
 
@@ -45,7 +22,30 @@ fn get_file_tree_recursive(path: &Path) -> Option<FileNode> {
 
 #[tauri::command]
 pub fn load_project_tree(path: String) -> Option<FileNode> {
-    get_file_tree_recursive(Path::new(&path))
+    // Just return the root node, children will be loaded via read_dir
+    get_file_node(Path::new(&path))
+}
+
+#[tauri::command]
+pub fn read_dir(path: String) -> Result<Vec<FileNode>, String> {
+    let path_obj = Path::new(&path);
+    if !path_obj.exists() || !path_obj.is_dir() {
+        return Err("Invalid directory".to_string());
+    }
+
+    let mut child_nodes = Vec::new();
+    if let Ok(entries) = fs::read_dir(path_obj) {
+        for entry in entries.flatten() {
+            let entry_path = entry.path();
+            if let Some(node) = get_file_node(&entry_path) {
+                child_nodes.push(node);
+            }
+        }
+    }
+    // Sort: Folders first
+    child_nodes.sort_by(|a, b| b.is_dir.cmp(&a.is_dir).then(a.name.cmp(&b.name)));
+
+    Ok(child_nodes)
 }
 
 #[tauri::command]

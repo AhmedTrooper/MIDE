@@ -5,15 +5,18 @@ mod gh;
 mod git;
 mod models;
 mod plugins;
+mod search;
 mod terminal;
 mod todos;
 
 use adb::{adb_connect, adb_devices, adb_disconnect, emulator_list_avds, emulator_start};
 use filesystem::{
-    create_directory, create_file, delete_item, load_project_tree, read_file_content, rename_item,
-    save_file_content, search_in_files,
+    create_directory, create_file, delete_item, load_project_tree, read_dir, read_file_content,
+    rename_item, save_file_content, search_in_files,
 };
 use formatter::{format_code, format_file};
+use search::fuzzy_search_files;
+
 use gh::{
     gh_api, gh_auth_login, gh_auth_logout, gh_auth_status, gh_browse, gh_browse_issue,
     gh_browse_pr, gh_gist_create, gh_gist_delete, gh_gist_list, gh_gist_view, gh_issue_close,
@@ -66,7 +69,9 @@ pub fn run() {
             delete_item,
             rename_item,
             search_in_files,
+            fuzzy_search_files,
             run_command,
+            read_dir,
             kill_terminal_process,
             execute_shell_command,
             detect_virtual_environments,

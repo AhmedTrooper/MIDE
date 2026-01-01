@@ -50,8 +50,8 @@ export default function ActivityBar({
   ];
 
   return (
-    <div className="w-12 flex flex-col justify-between bg-[#333333] text-[#858585] py-2 select-none z-20">
-      <div className="flex flex-col gap-2 items-center">
+    <div className="w-12 flex flex-col bg-[#333333] text-[#858585] py-2 select-none z-20 h-full overflow-hidden">
+      <div className="flex-1 flex flex-col gap-2 items-center overflow-y-auto no-scrollbar w-full min-h-0">
         {topItems.map((item) => (
           <Button
             key={item.id}
@@ -72,7 +72,7 @@ export default function ActivityBar({
         ))}
       </div>
 
-      <div className="flex flex-col gap-2 items-center">
+      <div className="flex flex-col gap-2 items-center mt-auto pt-2 bg-[#333333] shrink-0">
         {bottomItems.map((item) => (
           <Button
             key={item.id}
