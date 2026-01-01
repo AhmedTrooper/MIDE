@@ -41,7 +41,7 @@ function EditorPane({ groupId }: EditorPaneProps) {
   } = useEditorStore();
 
   const editorRef = useRef<CodeEditorHandle>(null);
-  const [matchCount, setMatchCount] = useState<{
+  const [matchCount] = useState<{
     current: number;
     total: number;
   }>();

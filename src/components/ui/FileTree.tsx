@@ -229,7 +229,7 @@ const FileTreeNode = ({ node, onSelect, level = 0 }: FileTreeProps) => {
         `}
             style={{ paddingLeft: `${level * 12 + 12}px` }}
             onClick={handleClick}
-            onContextMenu={(e) => {
+            onContextMenu={(_e) => {
               // Ensure selection updates on right click
               setSelectedNode({ path: node.path, isDir: node.is_dir });
             }}

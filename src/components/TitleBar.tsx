@@ -18,7 +18,7 @@ import { cn } from "../lib/utils";
 import AdbWidget from "./AdbWidget";
 
 export default function TitleBar() {
-  const [isMaximized, setIsMaximized] = useState(false);
+  const [, setIsMaximized] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [activeMenuDropdown, setActiveMenuDropdown] = useState<string | null>(
     null

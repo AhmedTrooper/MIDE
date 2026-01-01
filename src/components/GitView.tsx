@@ -6,7 +6,6 @@ import {
   GitCommit,
   GitBranch,
   GitPullRequest,
-  GitMerge,
   Plus,
   Minus,
   RotateCcw,
@@ -69,10 +68,6 @@ interface GitCommitInfo {
   body: string;
 }
 
-interface GitRemote {
-  name: string;
-  url: string;
-}
 
 type ViewMode =
   | "changes"
@@ -88,9 +83,6 @@ export default function GitView() {
   const [status, setStatus] = useState<GitStatus | null>(null);
   const [branches, setBranches] = useState<GitBranch[]>([]);
   const [commits, setCommits] = useState<GitCommitInfo[]>([]);
-  const [remotes, setRemotes] = useState<GitRemote[]>([]);
-  const [stashes, setStashes] = useState<string[]>([]);
-  const [tags, setTags] = useState<string[]>([]);
   const [commitMessage, setCommitMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -107,8 +99,7 @@ export default function GitView() {
   });
   const [newBranchName, setNewBranchName] = useState("");
   const [showBranchInput, setShowBranchInput] = useState(false);
-  const [newTagName, setNewTagName] = useState("");
-  const [showTagInput, setShowTagInput] = useState(false);
+  // Tag management removed
   const [diffView, setDiffView] = useState<{
     file: string;
     staged: boolean;
@@ -176,19 +167,6 @@ export default function GitView() {
       setCommits(commitList);
     } catch (err) {
       console.error("Log error:", err);
-    }
-  };
-
-  const fetchRemotes = async () => {
-    if (!projectPath) return;
-    try {
-      const remoteList = await invokeWithFallback<GitRemote[]>(
-        ["git_remotes", "git::git_remotes"],
-        { cwd: projectPath }
-      );
-      setRemotes(remoteList);
-    } catch (err) {
-      console.error("Remotes error:", err);
     }
   };
 
@@ -494,7 +472,6 @@ export default function GitView() {
     if (viewMode === "changes") fetchStatus();
     else if (viewMode === "history") fetchCommits();
     else if (viewMode === "branches") fetchBranches();
-    else if (viewMode === "remotes") fetchRemotes();
     else if (viewMode === "pullrequests" && useGitHubCLI) fetchPullRequests();
     else if (viewMode === "issues" && useGitHubCLI) fetchIssues();
     else if (viewMode === "actions" && useGitHubCLI) fetchWorkflows();
@@ -631,7 +608,6 @@ export default function GitView() {
     if (viewMode === "changes") fetchStatus();
     else if (viewMode === "history") fetchCommits();
     else if (viewMode === "branches") fetchBranches();
-    else if (viewMode === "remotes") fetchRemotes();
   }, [projectPath, viewMode]);
 
   const getStatusIcon = (status: string) => {
@@ -688,7 +664,6 @@ export default function GitView() {
               if (viewMode === "changes") fetchStatus();
               else if (viewMode === "history") fetchCommits();
               else if (viewMode === "branches") fetchBranches();
-              else if (viewMode === "remotes") fetchRemotes();
               else if (viewMode === "pullrequests") fetchPullRequests();
               else if (viewMode === "issues") fetchIssues();
               else if (viewMode === "actions") fetchWorkflows();

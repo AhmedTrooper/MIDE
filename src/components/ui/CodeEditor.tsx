@@ -1,13 +1,6 @@
 import Editor, { type OnMount, loader } from "@monaco-editor/react";
 import { useSettingsStore } from "../../lib/settingsStore";
-import {
-  useRef,
-  useImperativeHandle,
-  forwardRef,
-  useEffect,
-  useState,
-  memo,
-} from "react";
+import { useRef, useImperativeHandle, forwardRef, useState, memo } from "react";
 
 // Configure Monaco to work offline and suppress source map warnings
 loader.config({

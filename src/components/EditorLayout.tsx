@@ -29,7 +29,6 @@ export default function EditorLayout() {
     markFileDirty,
     isTerminalOpen,
     isSidebarCollapsed,
-    toggleSidebar,
     splitEditorHorizontal,
     splitEditorVertical,
     splitDirection,
