@@ -1,15 +1,39 @@
 import Editor, { type OnMount, loader } from "@monaco-editor/react";
 import { useSettingsStore } from "../../lib/settingsStore";
-import { useRef, useImperativeHandle, forwardRef, useState, memo } from "react";
+import {
+  useRef,
+  useImperativeHandle,
+  forwardRef,
+  useEffect,
+  useState,
+  memo,
+} from "react";
+import * as monaco from "monaco-editor";
 
-// Configure Monaco to work offline and suppress source map warnings
-loader.config({
-  "vs/nls": {
-    availableLanguages: {
-      "*": "",
-    },
+// Configure Monaco to use local files and disable source maps completely
+self.MonacoEnvironment = {
+  getWorkerUrl: function (_moduleId: string, label: string) {
+    if (label === "json") {
+      return "/node_modules/monaco-editor/esm/vs/language/json/json.worker.js";
+    }
+    if (label === "css" || label === "scss" || label === "less") {
+      return "/node_modules/monaco-editor/esm/vs/language/css/css.worker.js";
+    }
+    if (label === "html" || label === "handlebars" || label === "razor") {
+      return "/node_modules/monaco-editor/esm/vs/language/html/html.worker.js";
+    }
+    if (label === "typescript" || label === "javascript") {
+      return "/node_modules/monaco-editor/esm/vs/language/typescript/ts.worker.js";
+    }
+    return "/node_modules/monaco-editor/esm/vs/editor/editor.worker.js";
   },
-});
+};
+
+// Configure loader to use local Monaco
+loader.config({ monaco });
+
+// Preload Monaco to improve first-open performance
+loader.init().catch((err) => console.error("Failed to preload Monaco:", err));
 
 // Global flag to ensure language configs run only once
 let languagesConfigured = false;
@@ -17,18 +41,6 @@ let languagesConfigured = false;
 // Polyfill for requestIdleCallback
 const requestIdleCallback =
   window.requestIdleCallback || ((cb) => setTimeout(cb, 1));
-
-// Suppress console errors for missing source maps
-const originalConsoleError = console.error;
-console.error = (...args: any[]) => {
-  if (
-    typeof args[0] === "string" &&
-    (args[0].includes("loader.js.map") || args[0].includes("min-maps"))
-  ) {
-    return;
-  }
-  originalConsoleError.apply(console, args);
-};
 
 interface CodeEditorProps {
   code: string;
@@ -66,6 +78,9 @@ const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(
           ], // Ignore module, React, DOM, and property errors
         });
 
+        // Add validation delay to reduce CPU usage during typing
+        monaco.languages.typescript.javascriptDefaults.setEagerModelSync(false);
+
         monaco.languages.typescript.javascriptDefaults.setCompilerOptions({
           target: monaco.languages.typescript.ScriptTarget.Latest,
           allowNonTsExtensions: true,
@@ -90,6 +105,9 @@ const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(
             2307, 2552, 2304, 2874, 2584, 2693, 2339, 2580,
           ], // Ignore module, React, DOM, and property errors
         });
+
+        // Add validation delay for TypeScript too
+        monaco.languages.typescript.typescriptDefaults.setEagerModelSync(false);
 
         monaco.languages.typescript.typescriptDefaults.setCompilerOptions({
           target: monaco.languages.typescript.ScriptTarget.Latest,
@@ -224,7 +242,7 @@ const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(
               comments: false,
               strings: false,
             },
-            quickSuggestionsDelay: 100, // Add delay to reduce CPU usage
+            quickSuggestionsDelay: 300, // Increased delay to reduce CPU usage
             parameterHints: {
               enabled: true,
               cycle: false,
@@ -255,6 +273,23 @@ const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(
               addExtraSpaceOnTop: false,
               autoFindInSelection: "never",
               seedSearchStringFromSelection: "never",
+            },
+            // Performance optimizations
+            accessibilitySupport: "off", // Disable unless needed
+            hover: {
+              delay: 300, // Add delay to hover tooltips
+            },
+            glyphMargin: false, // Reduce rendering
+            folding: true,
+            foldingStrategy: "indentation", // Faster than auto
+            showFoldingControls: "mouseover", // Only show when needed
+            matchBrackets: "always",
+            renderLineHighlight: "line",
+            occurrencesHighlight: false, // Disable to improve performance
+            selectionHighlight: false, // Disable to improve performance
+            codeLens: false, // Disable code lens for performance
+            lightbulb: {
+              enabled: false, // Disable lightbulb for performance
             },
           }}
         />

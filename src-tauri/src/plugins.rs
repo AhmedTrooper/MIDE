@@ -174,6 +174,16 @@ impl PluginManager {
 
 // Tauri Commands
 #[tauri::command]
+pub fn ensure_plugin_dir(plugin_dir: String) -> Result<(), String> {
+    let path = PathBuf::from(plugin_dir);
+    if !path.exists() {
+        fs::create_dir_all(&path)
+            .map_err(|e| format!("Failed to create plugin directory: {}", e))?;
+    }
+    Ok(())
+}
+
+#[tauri::command]
 pub fn discover_plugins(plugin_dir: String) -> Result<Vec<PluginManifest>, String> {
     let mut manager = PluginManager::new(PathBuf::from(plugin_dir));
     manager.discover_plugins()
@@ -198,4 +208,146 @@ pub fn get_plugin_content(plugin_dir: String, plugin_id: String) -> Result<Strin
 
     let main_path = plugin_path.join(&manifest.main);
     fs::read_to_string(main_path).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn install_plugin(
+    plugin_dir: String,
+    plugin_url: String,
+    plugin_id: String,
+) -> Result<(), String> {
+    let plugin_path = PathBuf::from(&plugin_dir).join(&plugin_id);
+
+    // Create plugin directory
+    fs::create_dir_all(&plugin_path)
+        .map_err(|e| format!("Failed to create plugin directory: {}", e))?;
+
+    // Create demo plugin based on plugin_id
+    let (manifest_content, index_content) = match plugin_id.as_str() {
+        "prettier-format" => (
+            r#"{
+  "id": "prettier-format",
+  "name": "Prettier Formatter",
+  "version": "1.0.0",
+  "description": "Format your code with Prettier",
+  "author": "MIDE Team",
+  "type": "js",
+  "main": "index.js",
+  "activation_events": ["onCommand:prettier.format"],
+  "contributes": {
+    "commands": [
+      {
+        "id": "prettier.format",
+        "title": "Format Document",
+        "category": "Prettier"
+      }
+    ]
+  },
+  "permissions": ["fs:read", "fs:write"],
+  "enabled": true
+}"#,
+            r#"// Prettier Formatter Plugin
+self.addEventListener('message', (e) => {
+  const { type, data } = e.data;
+  if (type === 'activate') {
+    console.log('Prettier formatter activated!');
+  }
+});
+"#,
+        ),
+        "bracket-pair-colorizer" => (
+            r#"{
+  "id": "bracket-pair-colorizer",
+  "name": "Bracket Pair Colorizer",
+  "version": "1.0.0",
+  "description": "Colorize matching brackets",
+  "author": "MIDE Team",
+  "type": "js",
+  "main": "index.js",
+  "activation_events": ["*"],
+  "contributes": {},
+  "permissions": ["editor:read"],
+  "enabled": true
+}"#,
+            r#"// Bracket Pair Colorizer Plugin
+self.addEventListener('message', (e) => {
+  console.log('Bracket colorizer active');
+});
+"#,
+        ),
+        "auto-save" => (
+            r#"{
+  "id": "auto-save",
+  "name": "Auto Save",
+  "version": "1.0.0",
+  "description": "Automatically save files after delay",
+  "author": "MIDE Team",
+  "type": "js",
+  "main": "index.js",
+  "activation_events": ["*"],
+  "contributes": {},
+  "permissions": ["fs:write"],
+  "enabled": true
+}"#,
+            r#"// Auto Save Plugin
+let saveTimeout;
+self.addEventListener('message', (e) => {
+  const { type, data } = e.data;
+  if (type === 'fileChange') {
+    clearTimeout(saveTimeout);
+    saveTimeout = setTimeout(() => {
+      console.log('Auto-saving file...');
+    }, 1000);
+  }
+});
+"#,
+        ),
+        "git-lens" => (
+            r#"{
+  "id": "git-lens",
+  "name": "Git Lens",
+  "version": "1.0.0",
+  "description": "Enhanced Git integration",
+  "author": "MIDE Team",
+  "type": "js",
+  "main": "index.js",
+  "activation_events": ["onView:git"],
+  "contributes": {},
+  "permissions": ["git:read"],
+  "enabled": true
+}"#,
+            r#"// Git Lens Plugin
+self.addEventListener('message', (e) => {
+  console.log('Git Lens activated');
+});
+"#,
+        ),
+        _ => return Err(format!("Unknown plugin: {}", plugin_id)),
+    };
+
+    // Write plugin.json
+    let manifest_path = plugin_path.join("plugin.json");
+    fs::write(&manifest_path, manifest_content)
+        .map_err(|e| format!("Failed to write manifest: {}", e))?;
+
+    // Write index.js
+    let index_path = plugin_path.join("index.js");
+    fs::write(&index_path, index_content)
+        .map_err(|e| format!("Failed to write plugin code: {}", e))?;
+
+    Ok(())
+}
+
+#[tauri::command]
+pub fn uninstall_plugin(plugin_dir: String, plugin_id: String) -> Result<(), String> {
+    let plugin_path = Path::new(&plugin_dir).join(&plugin_id);
+
+    if !plugin_path.exists() {
+        return Err(format!("Plugin {} not found", plugin_id));
+    }
+
+    fs::remove_dir_all(&plugin_path)
+        .map_err(|e| format!("Failed to remove plugin directory: {}", e))?;
+
+    Ok(())
 }

@@ -8,10 +8,10 @@ import Sidebar from "./Sidebar";
 import SearchView from "./SearchView";
 import SettingsView from "./SettingsView";
 import TodoView from "./TodoView";
+import TerminalView from "./TerminalView";
 import StatusBar from "./StatusBar";
 import RunConfigDialog from "./RunConfigDialog";
 import CommandPalette from "./CommandPalette";
-import Terminal from "./Terminal";
 import GitView from "./GitView";
 import SplitEditorLayout from "./SplitEditorLayout";
 import PluginManagerView from "./PluginManagerView";
@@ -27,8 +27,8 @@ export default function EditorLayout() {
     setActiveFile,
     setActiveView,
     markFileDirty,
-    isTerminalOpen,
     isSidebarCollapsed,
+    toggleSidebar,
     splitEditorHorizontal,
     splitEditorVertical,
     splitDirection,
@@ -173,6 +173,7 @@ export default function EditorLayout() {
         {activeView === "search" && !isSidebarCollapsed && <SearchView />}
         {activeView === "git" && !isSidebarCollapsed && <GitView />}
         {activeView === "todos" && !isSidebarCollapsed && <TodoView />}
+        {activeView === "terminal" && !isSidebarCollapsed && <TerminalView />}
         {activeView === "extensions" && !isSidebarCollapsed && (
           <PluginManagerView />
         )}
@@ -213,9 +214,6 @@ export default function EditorLayout() {
               <SplitEditorLayout />
             </>
           )}
-
-          {/* Terminal Panel */}
-          {isTerminalOpen && activeView !== "settings" && <Terminal />}
         </div>
       </div>
 

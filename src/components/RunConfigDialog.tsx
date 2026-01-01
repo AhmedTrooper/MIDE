@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { X, Plus, Trash, Save } from "lucide-react";
 import { useEditorStore, type RunConfiguration } from "../lib/store";
 import { Button } from "./ui/button";
+import { Input } from "./ui/input";
 
 export default function RunConfigDialog() {
   const {
@@ -123,13 +124,13 @@ export default function RunConfigDialog() {
               <div className="space-y-4">
                 <div className="space-y-1">
                   <label className="text-xs text-gray-400">Name</label>
-                  <input
+                  <Input
                     type="text"
                     value={selectedConfig.name}
                     onChange={(e) =>
                       updateConfig(selectedConfig.id, { name: e.target.value })
                     }
-                    className="w-full bg-[#3c3c3c] border border-[#333] rounded px-3 py-1.5 text-sm text-white focus:border-[#007fd4] outline-none"
+                    className="w-full bg-[#3c3c3c] border-[#333] text-white focus-visible:ring-[#007fd4]"
                   />
                 </div>
 
@@ -138,7 +139,7 @@ export default function RunConfigDialog() {
                     Command / Executable
                   </label>
                   <div className="flex gap-2">
-                    <input
+                    <Input
                       type="text"
                       value={selectedConfig.command}
                       onChange={(e) =>
@@ -147,14 +148,14 @@ export default function RunConfigDialog() {
                         })
                       }
                       placeholder="e.g. npm, python, cargo"
-                      className="flex-1 bg-[#3c3c3c] border border-[#333] rounded px-3 py-1.5 text-sm text-white focus:border-[#007fd4] outline-none"
+                      className="flex-1 bg-[#3c3c3c] border-[#333] text-white focus-visible:ring-[#007fd4]"
                     />
                   </div>
                 </div>
 
                 <div className="space-y-1">
                   <label className="text-xs text-gray-400">Arguments</label>
-                  <input
+                  <Input
                     type="text"
                     value={selectedConfig.args?.join(" ") || ""}
                     onChange={(e) =>
@@ -163,7 +164,7 @@ export default function RunConfigDialog() {
                       })
                     }
                     placeholder="e.g. run dev, main.py"
-                    className="w-full bg-[#3c3c3c] border border-[#333] rounded px-3 py-1.5 text-sm text-white focus:border-[#007fd4] outline-none"
+                    className="w-full bg-[#3c3c3c] border-[#333] text-white focus-visible:ring-[#007fd4]"
                   />
                 </div>
 
@@ -171,14 +172,14 @@ export default function RunConfigDialog() {
                   <label className="text-xs text-gray-400">
                     Working Directory
                   </label>
-                  <input
+                  <Input
                     type="text"
                     value={selectedConfig.cwd || ""}
                     onChange={(e) =>
                       updateConfig(selectedConfig.id, { cwd: e.target.value })
                     }
                     placeholder="${workspaceFolder}"
-                    className="w-full bg-[#3c3c3c] border border-[#333] rounded px-3 py-1.5 text-sm text-white focus:border-[#007fd4] outline-none"
+                    className="w-full bg-[#3c3c3c] border-[#333] text-white focus-visible:ring-[#007fd4]"
                   />
                 </div>
               </div>

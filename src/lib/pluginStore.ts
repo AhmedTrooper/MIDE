@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { invoke } from "@tauri-apps/api/core";
-import { homeDir } from '@tauri-apps/api/path';
+import { homeDir, join } from '@tauri-apps/api/path';
+import { exists, mkdir, BaseDirectory } from '@tauri-apps/plugin-fs';
 import { useEditorStore } from './store';
 
 // Event emitter for plugin system
@@ -133,6 +134,8 @@ interface PluginState {
     unloadPlugin: (pluginId: string) => Promise<void>;
     enablePlugin: (pluginId: string) => Promise<void>;
     disablePlugin: (pluginId: string) => Promise<void>;
+    installPlugin: (pluginUrl: string, pluginId: string) => Promise<void>;
+    uninstallPlugin: (pluginId: string) => Promise<void>;
     registerCommand: (commandId: string, handler: (...args: any[]) => any) => void;
     executeCommand: (commandId: string, ...args: any[]) => Promise<any>;
     createPluginAPI: (pluginId: string) => PluginAPI;
@@ -146,10 +149,23 @@ export const usePluginStore = create<PluginState>((set, get) => ({
     commands: new Map(),
 
     initializePluginSystem: async () => {
-        const home = await homeDir();
-        const pluginDir = `${home}.mide/plugins`;
-        set({ pluginDir });
-        await get().discoverPlugins();
+        try {
+            const home = await homeDir();
+            const pluginDir = await join(home, '.mide', 'plugins');
+
+            // Use Rust backend to ensure directory with proper permissions
+            try {
+                await invoke('ensure_plugin_dir', { pluginDir });
+            } catch (err) {
+                console.error('Failed to create plugin directory:', err);
+                throw err;
+            }
+
+            set({ pluginDir });
+            await get().discoverPlugins();
+        } catch (err) {
+            console.error('Failed to initialize plugin system:', err);
+        }
     },
 
     discoverPlugins: async () => {
@@ -238,6 +254,41 @@ export const usePluginStore = create<PluginState>((set, get) => ({
 
     disablePlugin: async (pluginId: string) => {
         await get().unloadPlugin(pluginId);
+    },
+
+    installPlugin: async (pluginUrl: string, pluginId: string) => {
+        const { pluginDir } = get();
+        if (!pluginDir) return;
+
+        set({ isLoading: true });
+        try {
+            await invoke('install_plugin', { pluginDir, pluginUrl, pluginId });
+            await get().discoverPlugins();
+        } catch (err) {
+            console.error('Failed to install plugin:', err);
+            throw err;
+        } finally {
+            set({ isLoading: false });
+        }
+    },
+
+    uninstallPlugin: async (pluginId: string) => {
+        const { pluginDir } = get();
+        if (!pluginDir) return;
+
+        set({ isLoading: true });
+        try {
+            // Unload first if loaded
+            await get().unloadPlugin(pluginId);
+
+            await invoke('uninstall_plugin', { pluginDir, pluginId });
+            await get().discoverPlugins();
+        } catch (err) {
+            console.error('Failed to uninstall plugin:', err);
+            throw err;
+        } finally {
+            set({ isLoading: false });
+        }
     },
 
     registerCommand: (commandId: string, handler: (...args: any[]) => any) => {

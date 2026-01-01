@@ -18,4 +18,7 @@ export default defineConfig({
       overlay: false,
     },
   },
+  optimizeDeps: {
+    exclude: ['monaco-editor'],
+  },
 })

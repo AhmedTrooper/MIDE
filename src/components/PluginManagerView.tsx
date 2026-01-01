@@ -10,6 +10,7 @@ import {
   Package,
   ShoppingCart,
   Star,
+  Trash2,
 } from "lucide-react";
 import { Badge } from "./ui/badge";
 
@@ -36,6 +37,8 @@ export default function PluginManagerView() {
     discoverPlugins,
     enablePlugin,
     disablePlugin,
+    installPlugin,
+    uninstallPlugin,
   } = usePluginStore();
 
   const [selectedPlugin, setSelectedPlugin] = useState<PluginManifest | null>(
@@ -76,6 +79,26 @@ export default function PluginManagerView() {
       await disablePlugin(plugin.id);
     } else {
       await enablePlugin(plugin.id);
+    }
+  };
+
+  const handleUninstallPlugin = async (plugin: PluginManifest) => {
+    if (confirm(`Are you sure you want to uninstall ${plugin.name}?`)) {
+      try {
+        await uninstallPlugin(plugin.id);
+        setSelectedPlugin(null);
+      } catch (err) {
+        console.error("Failed to uninstall plugin:", err);
+      }
+    }
+  };
+
+  const handleInstallPlugin = async (plugin: MarketplacePlugin) => {
+    try {
+      const pluginUrl = plugin.id; // In real scenario, this would be a download URL
+      await installPlugin(pluginUrl, plugin.id);
+    } catch (err) {
+      console.error("Failed to install plugin:", err);
     }
   };
 
@@ -263,17 +286,27 @@ export default function PluginManagerView() {
                     {selectedPlugin.description || "No description provided"}
                   </p>
                 </div>
-                <Button
-                  onClick={() => handleTogglePlugin(selectedPlugin)}
-                  className={
-                    isPluginLoaded(selectedPlugin.id)
-                      ? "bg-red-600 hover:bg-red-700"
-                      : "bg-blue-600 hover:bg-blue-700"
-                  }
-                >
-                  <Power size={16} className="mr-2" />
-                  {isPluginLoaded(selectedPlugin.id) ? "Disable" : "Enable"}
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={() => handleTogglePlugin(selectedPlugin)}
+                    className={
+                      isPluginLoaded(selectedPlugin.id)
+                        ? "bg-yellow-600 hover:bg-yellow-700"
+                        : "bg-blue-600 hover:bg-blue-700"
+                    }
+                  >
+                    <Power size={16} className="mr-2" />
+                    {isPluginLoaded(selectedPlugin.id) ? "Disable" : "Enable"}
+                  </Button>
+                  <Button
+                    onClick={() => handleUninstallPlugin(selectedPlugin)}
+                    variant="destructive"
+                    className="bg-red-600 hover:bg-red-700"
+                  >
+                    <Trash2 size={16} className="mr-2" />
+                    Uninstall
+                  </Button>
+                </div>
               </div>
 
               <div className="flex items-center gap-4 text-sm text-gray-400">
@@ -442,11 +475,16 @@ export default function PluginManagerView() {
                   </div>
                 </div>
                 <Button
-                  disabled={isPluginInstalled(selectedMarketplacePlugin.id)}
+                  disabled={
+                    isPluginInstalled(selectedMarketplacePlugin.id) || isLoading
+                  }
+                  onClick={() => handleInstallPlugin(selectedMarketplacePlugin)}
                   className="bg-blue-600 hover:bg-blue-700"
                 >
                   {isPluginInstalled(selectedMarketplacePlugin.id)
                     ? "Installed"
+                    : isLoading
+                    ? "Installing..."
                     : "Install"}
                 </Button>
               </div>

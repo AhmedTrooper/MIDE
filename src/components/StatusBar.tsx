@@ -1,4 +1,4 @@
-import { GitBranch, RefreshCw, AlertCircle, Bell } from "lucide-react";
+import { GitBranch, RefreshCw, AlertCircle, Check, Bell } from "lucide-react";
 import { Button } from "./ui/button";
 
 interface StatusBarProps {

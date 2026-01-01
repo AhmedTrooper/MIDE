@@ -18,7 +18,7 @@ import { cn } from "../lib/utils";
 import AdbWidget from "./AdbWidget";
 
 export default function TitleBar() {
-  const [, setIsMaximized] = useState(false);
+  const [isMaximized, setIsMaximized] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [activeMenuDropdown, setActiveMenuDropdown] = useState<string | null>(
     null
@@ -31,8 +31,6 @@ export default function TitleBar() {
     activeRunConfigId,
     setActiveRunConfigId,
     setRunConfigDialogOpen,
-    setTerminalOpen,
-    appendTerminalOutput,
     projectPath,
   } = useEditorStore();
   const appWindow = getCurrentWindow();
@@ -89,50 +87,11 @@ export default function TitleBar() {
       );
     }
 
-    setTerminalOpen(true);
-    appendTerminalOutput(
-      `> Working Directory: ${workingDir}\n> Executing: ${
-        activeConfig.command
-      } ${activeConfig.args?.join(" ") || ""}\n`
+    // Note: Run commands now output to the professional terminal view
+    // You can access it from the Activity Bar (Terminal icon)
+    console.log(
+      `Running: ${activeConfig.command} ${activeConfig.args?.join(" ") || ""}`
     );
-
-    try {
-      // Listen for output
-      const unlistenData = await listen<string>(
-        `term-data-${activeConfig.id}`,
-        (event) => {
-          appendTerminalOutput(event.payload + "\n");
-        }
-      );
-
-      const unlistenExit = await listen<number>(
-        `term-exit-${activeConfig.id}`,
-        (event) => {
-          appendTerminalOutput(
-            `\n> Process exited with code ${event.payload}\n`
-          );
-          unlistenData();
-          unlistenExit();
-          unlistenError();
-        }
-      );
-
-      const unlistenError = await listen<string>(
-        `term-error-${activeConfig.id}`,
-        (event) => {
-          appendTerminalOutput(`\n> Error: ${event.payload}\n`);
-        }
-      );
-
-      await invoke("run_command", {
-        id: activeConfig.id,
-        command: activeConfig.command,
-        args: activeConfig.args || [],
-        cwd: workingDir,
-      });
-    } catch (err) {
-      appendTerminalOutput(`> Failed to start: ${err}\n`);
-    }
   };
 
   const minimize = () => appWindow.minimize();

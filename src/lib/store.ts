@@ -31,6 +31,17 @@ export interface EditorGroup {
     activeFile: string | null;
 }
 
+export interface TerminalInstance {
+    id: string;
+    name: string;
+    output: string[];
+    cwd: string;
+    isActive: boolean;
+    venvActivated: boolean;
+    venvPath?: string;
+    isRunning: boolean;
+}
+
 export type SplitDirection = 'none' | 'horizontal' | 'vertical';
 
 interface EditorState {
@@ -61,9 +72,16 @@ interface EditorState {
     isRunConfigDialogOpen: boolean;
 
     // Terminal State
-    terminalOutput: string[];
-    appendTerminalOutput: (line: string) => void;
-    clearTerminalOutput: () => void;
+    terminals: TerminalInstance[];
+    activeTerminalId: string | null;
+    addTerminal: (cwd?: string, name?: string) => void;
+    removeTerminal: (id: string) => void;
+    setActiveTerminal: (id: string) => void;
+    appendToTerminal: (id: string, line: string) => void;
+    clearTerminal: (id: string) => void;
+    updateTerminalName: (id: string, name: string) => void;
+    activateVenvInTerminal: (id: string, venvPath: string) => void;
+    setTerminalRunning: (id: string, isRunning: boolean) => void;
 
     // ADB State
     adbDevices: string[];
@@ -75,12 +93,10 @@ interface EditorState {
     setProjectPath: (path: string) => void;
     setActiveView: (view: string) => void;
     setCommandPaletteOpen: (isOpen: boolean) => void;
-    setTerminalOpen: (isOpen: boolean) => void;
     setSidebarCollapsed: (isCollapsed: boolean) => void;
     toggleSidebar: () => void;
     setFindWidgetOpen: (isOpen: boolean) => void;
     setFindReplaceMode: (isReplace: boolean) => void;
-    toggleTerminal: () => void;
     openFile: (file: OpenFile) => void;
     closeFile: (path: string) => void;
     setActiveFile: (path: string) => void;
@@ -121,7 +137,6 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     editorGroups: [{ id: 'group-1', activeFile: null }],
     activeGroupId: 'group-1',
     isCommandPaletteOpen: false,
-    isTerminalOpen: true,
     isSidebarCollapsed: false,
     isFindWidgetOpen: false,
     isFindReplaceMode: false,
@@ -137,9 +152,84 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     activeRunConfigId: 'default',
     isRunConfigDialogOpen: false,
 
-    terminalOutput: [],
-    appendTerminalOutput: (line) => set((state) => ({ terminalOutput: [...state.terminalOutput, line] })),
-    clearTerminalOutput: () => set({ terminalOutput: [] }),
+    terminals: [],
+    activeTerminalId: null,
+
+    addTerminal: (cwd?: string, name?: string) => set((state) => {
+        const id = `terminal-${Date.now()}`;
+        const terminalName = name || `Terminal ${state.terminals.length + 1}`;
+        const workingDir = cwd || state.projectPath || '~';
+
+        const newTerminal: TerminalInstance = {
+            id,
+            name: terminalName,
+            output: [`Welcome to ${terminalName}`, `Working directory: ${workingDir}`, ''],
+            cwd: workingDir,
+            isActive: true,
+            venvActivated: false,
+            isRunning: false,
+        };
+
+        return {
+            terminals: [...state.terminals.map(t => ({ ...t, isActive: false })), newTerminal],
+            activeTerminalId: id,
+        };
+    }),
+
+    removeTerminal: (id) => set((state) => {
+        const newTerminals = state.terminals.filter(t => t.id !== id);
+        let newActiveId = state.activeTerminalId;
+
+        if (state.activeTerminalId === id) {
+            newActiveId = newTerminals.length > 0 ? newTerminals[newTerminals.length - 1].id : null;
+        }
+
+        return {
+            terminals: newTerminals.map(t => ({
+                ...t,
+                isActive: t.id === newActiveId,
+            })),
+            activeTerminalId: newActiveId,
+        };
+    }),
+
+    setActiveTerminal: (id) => set((state) => ({
+        terminals: state.terminals.map(t => ({
+            ...t,
+            isActive: t.id === id,
+        })),
+        activeTerminalId: id,
+    })),
+
+    appendToTerminal: (id, line) => set((state) => ({
+        terminals: state.terminals.map(t =>
+            t.id === id ? { ...t, output: [...t.output, line] } : t
+        ),
+    })),
+
+    clearTerminal: (id) => set((state) => ({
+        terminals: state.terminals.map(t =>
+            t.id === id ? { ...t, output: [] } : t
+        ),
+    })),
+
+    updateTerminalName: (id, name) => set((state) => ({
+        terminals: state.terminals.map(t =>
+            t.id === id ? { ...t, name } : t
+        ),
+    })),
+
+    activateVenvInTerminal: (id, venvPath) => set((state) => ({
+        terminals: state.terminals.map(t =>
+            t.id === id ? { ...t, venvActivated: true, venvPath } : t
+        ),
+    })),
+
+    setTerminalRunning: (id, isRunning) => set((state) => ({
+        terminals: state.terminals.map(t =>
+            t.id === id ? { ...t, isRunning } : t
+        ),
+    })),
 
     adbDevices: [],
     setAdbDevices: (devices) => set({ adbDevices: devices }),
@@ -150,12 +240,10 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     setProjectPath: (path) => set({ projectPath: path }),
     setActiveView: (view) => set({ activeView: view }),
     setCommandPaletteOpen: (isOpen) => set({ isCommandPaletteOpen: isOpen }),
-    setTerminalOpen: (isOpen) => set({ isTerminalOpen: isOpen }),
     setSidebarCollapsed: (isCollapsed) => set({ isSidebarCollapsed: isCollapsed }),
     toggleSidebar: () => set((state) => ({ isSidebarCollapsed: !state.isSidebarCollapsed })),
-    setFindWidgetOpen: (isOpen) => set({ isFindWidgetOpen: isOpen }),
+    setFindWidgetOpen: (isOpen) => set({ iFindWidgetOpen: isOpen }),
     setFindReplaceMode: (isReplace) => set({ isFindReplaceMode: isReplace }),
-    toggleTerminal: () => set((state) => ({ isTerminalOpen: !state.isTerminalOpen })),
     setSearchQuery: (query) => set({ searchQuery: query }),
     setSelectedNode: (node) => set({ selectedNode: node }),
     setCreationState: (state) => set({ creationState: state }),
@@ -325,9 +413,21 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     })),
 
     updateFileContent: (path, content, markDirty = true) => {
-        // Emit file change event for plugins
-        pluginEvents.emit('file:change', path, content);
+        // Debounce file:change events to reduce plugin overhead
+        // Clear existing debounce timer for this file
+        const timerId = (window as any).__fileChangeTimers?.[path];
+        if (timerId) clearTimeout(timerId);
 
+        // Set new debounce timer (500ms delay)
+        if (!(window as any).__fileChangeTimers) {
+            (window as any).__fileChangeTimers = {};
+        }
+        (window as any).__fileChangeTimers[path] = setTimeout(() => {
+            pluginEvents.emit('file:change', path, content);
+            delete (window as any).__fileChangeTimers[path];
+        }, 500);
+
+        // Update state immediately (don't debounce state updates)
         set((state) => ({
             openFiles: state.openFiles.map((f) =>
                 f.path === path ? { ...f, content, isDirty: markDirty ? true : f.isDirty } : f
