@@ -6,6 +6,7 @@ import {
   Settings,
   User,
   CheckSquare,
+  Terminal as TerminalIcon,
 } from "lucide-react";
 import { Button } from "./ui/button";
 import { useEditorStore } from "../lib/store";
@@ -39,6 +40,7 @@ export default function ActivityBar({
     { id: "search", icon: Search, label: "Search" },
     { id: "git", icon: GitGraph, label: "Source Control" },
     { id: "todos", icon: CheckSquare, label: "TODO / Tasks" },
+    { id: "terminal", icon: TerminalIcon, label: "Terminal" },
     { id: "extensions", icon: Box, label: "Extensions" },
   ];
 

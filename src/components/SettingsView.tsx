@@ -1,4 +1,14 @@
 import { useSettingsStore } from "../lib/settingsStore";
+import { Check, ChevronDown } from "lucide-react";
+import { Input } from "./ui/input";
+import { Checkbox } from "./ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "./ui/select";
 
 export default function SettingsView() {
   const { settings, updateSettings } = useSettingsStore();
@@ -22,13 +32,13 @@ export default function SettingsView() {
             <div className="space-y-4">
               <div className="flex flex-col gap-2">
                 <label className="text-sm font-medium">Font Size</label>
-                <input
+                <Input
                   type="number"
                   value={settings.fontSize}
                   onChange={(e) =>
                     handleChange("fontSize", parseInt(e.target.value))
                   }
-                  className="bg-[#3c3c3c] border border-[#3c3c3c] rounded px-3 py-1.5 text-sm w-24 focus:border-blue-500 outline-none"
+                  className="bg-[#3c3c3c] border-[#555] text-white h-8 w-24"
                 />
                 <p className="text-xs text-gray-500">
                   Controls the font size in pixels.
@@ -37,11 +47,11 @@ export default function SettingsView() {
 
               <div className="flex flex-col gap-2">
                 <label className="text-sm font-medium">Font Family</label>
-                <input
+                <Input
                   type="text"
                   value={settings.fontFamily}
                   onChange={(e) => handleChange("fontFamily", e.target.value)}
-                  className="bg-[#3c3c3c] border border-[#3c3c3c] rounded px-3 py-1.5 text-sm w-full max-w-md focus:border-blue-500 outline-none"
+                  className="bg-[#3c3c3c] border-[#555] text-white placeholder:text-gray-500 h-8 w-full max-w-md"
                 />
               </div>
 
@@ -52,23 +62,38 @@ export default function SettingsView() {
                     Controls how lines should wrap.
                   </p>
                 </div>
-                <select
+                <Select
                   value={settings.wordWrap}
-                  onChange={(e) => handleChange("wordWrap", e.target.value)}
-                  className="bg-[#3c3c3c] border border-[#3c3c3c] rounded px-3 py-1.5 text-sm outline-none"
+                  onValueChange={(value) => handleChange("wordWrap", value)}
                 >
-                  <option value="off">Off</option>
-                  <option value="on">On</option>
-                </select>
+                  <SelectTrigger className="w-[120px] bg-[#3c3c3c] border-[#555] text-white h-8 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-[#2d2d30] border-[#454545] text-white">
+                    <SelectItem
+                      value="off"
+                      className="hover:bg-[#3e3e42] focus:bg-[#3e3e42] cursor-pointer"
+                    >
+                      Off
+                    </SelectItem>
+                    <SelectItem
+                      value="on"
+                      className="hover:bg-[#3e3e42] focus:bg-[#3e3e42] cursor-pointer"
+                    >
+                      On
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="flex items-center gap-3">
-                <input
-                  type="checkbox"
+                <Checkbox
                   id="minimap"
                   checked={settings.minimap}
-                  onChange={(e) => handleChange("minimap", e.target.checked)}
-                  className="w-4 h-4 rounded border-gray-600 bg-[#3c3c3c] text-blue-600 focus:ring-blue-500"
+                  onCheckedChange={(checked) =>
+                    handleChange("minimap", checked)
+                  }
+                  className="w-4 h-4 border-gray-600 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
                 />
                 <label
                   htmlFor="minimap"
@@ -94,14 +119,28 @@ export default function SettingsView() {
                     Specifies the color theme.
                   </p>
                 </div>
-                <select
+                <Select
                   value={settings.theme}
-                  onChange={(e) => handleChange("theme", e.target.value)}
-                  className="bg-[#3c3c3c] border border-[#3c3c3c] rounded px-3 py-1.5 text-sm outline-none"
+                  onValueChange={(value) => handleChange("theme", value)}
                 >
-                  <option value="vs-dark">Dark (Visual Studio)</option>
-                  <option value="light">Light (Visual Studio)</option>
-                </select>
+                  <SelectTrigger className="w-[200px] bg-[#3c3c3c] border-[#555] text-white h-8 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-[#2d2d30] border-[#454545] text-white">
+                    <SelectItem
+                      value="vs-dark"
+                      className="hover:bg-[#3e3e42] focus:bg-[#3e3e42] cursor-pointer"
+                    >
+                      Dark (Visual Studio)
+                    </SelectItem>
+                    <SelectItem
+                      value="light"
+                      className="hover:bg-[#3e3e42] focus:bg-[#3e3e42] cursor-pointer"
+                    >
+                      Light (Visual Studio)
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           </section>

@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { useEditorStore } from "../../lib/store";
 import { invoke } from "@tauri-apps/api/core";
+import { Input } from "./input";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -31,7 +32,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "./dialog";
-import { Input } from "./input";
 import { Button } from "./button";
 
 export interface FileNode {
@@ -229,7 +229,7 @@ const FileTreeNode = ({ node, onSelect, level = 0 }: FileTreeProps) => {
         `}
             style={{ paddingLeft: `${level * 12 + 12}px` }}
             onClick={handleClick}
-            onContextMenu={(_e) => {
+            onContextMenu={(e) => {
               // Ensure selection updates on right click
               setSelectedNode({ path: node.path, isDir: node.is_dir });
             }}
@@ -433,13 +433,13 @@ const FileTreeNode = ({ node, onSelect, level = 0 }: FileTreeProps) => {
                 <FilePlus size={16} className="text-gray-400 shrink-0" />
               )}
               <form onSubmit={handleCreateSubmit} className="flex-1 min-w-0">
-                <input
+                <Input
                   ref={inputRef}
                   type="text"
                   value={newItemName}
                   onChange={(e) => setNewItemName(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  className="w-full bg-[#3c3c3c] border border-[#007fd4] text-white text-xs px-1 py-0.5 outline-none"
+                  className="w-full bg-[#3c3c3c] border-[#007fd4] text-white h-5 text-xs px-1 py-0.5"
                 />
               </form>
             </div>

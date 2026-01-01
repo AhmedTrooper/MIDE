@@ -3,6 +3,7 @@ import { Loader2, X } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 import { getLanguageFromPath } from "../lib/utils";
 import { Button } from "./ui/button";
+import { Input } from "./ui/input";
 
 export default function SearchView() {
   const {
@@ -49,12 +50,12 @@ export default function SearchView() {
           Search
         </div>
         <form onSubmit={handleSearch} className="relative">
-          <input
+          <Input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search"
-            className="w-full bg-[#3c3c3c] border border-[#3c3c3c] focus:border-[#007fd4] outline-none text-sm px-2 py-1 text-white placeholder-gray-400 pr-8"
+            className="w-full bg-[#3c3c3c] border-[#555] text-white placeholder:text-gray-500 h-8 text-sm pr-8"
           />
           {searchQuery && !isSearching && (
             <Button

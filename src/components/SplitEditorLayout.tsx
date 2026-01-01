@@ -18,7 +18,7 @@ import {
   ResizableHandle,
 } from "./ui/resizable";
 import { motion } from "motion/react";
-import { useRef, useState } from "react";
+import { useRef, useState, useCallback } from "react";
 
 interface EditorPaneProps {
   groupId: string;
@@ -41,12 +41,21 @@ function EditorPane({ groupId }: EditorPaneProps) {
   } = useEditorStore();
 
   const editorRef = useRef<CodeEditorHandle>(null);
-  const [matchCount] = useState<{
+  const [matchCount, setMatchCount] = useState<{
     current: number;
     total: number;
   }>();
   const [fileToClose, setFileToClose] = useState<string | null>(null);
   const [isCloseDialogOpen, setIsCloseDialogOpen] = useState(false);
+
+  // Memoized content change handler
+  const handleContentChange = useCallback(
+    (path: string, value: string) => {
+      // Update immediately for responsive typing - debouncing is handled in store for plugins
+      updateFileContent(path, value, true);
+    },
+    [updateFileContent]
+  );
 
   const group = editorGroups.find((g) => g.id === groupId);
   const activeFileObj = openFiles.find((f) => f.path === group?.activeFile);
@@ -238,19 +247,23 @@ function EditorPane({ groupId }: EditorPaneProps) {
             matchCount={matchCount}
           />
         )}
-        {activeFileObj ? (
+
+        {/* Always keep editor mounted but hidden when no file is active to improve performance */}
+        <div className={`h-full ${activeFileObj ? "" : "hidden"}`}>
           <CodeEditor
             ref={editorRef}
-            code={activeFileObj.content}
-            language={activeFileObj.language}
-            filePath={activeFileObj.path}
+            code={activeFileObj?.content || ""}
+            language={activeFileObj?.language || "plaintext"}
+            filePath={activeFileObj?.path || ""}
             onChange={(value) => {
-              if (value !== undefined) {
-                updateFileContent(activeFileObj.path, value, true);
+              if (value !== undefined && activeFileObj) {
+                handleContentChange(activeFileObj.path, value);
               }
             }}
           />
-        ) : (
+        </div>
+
+        {!activeFileObj && (
           <div className="flex items-center justify-center h-full text-gray-500 bg-[#1e1e1e]">
             <div className="text-center">
               <div className="text-4xl font-bold mb-4 text-[#333]">

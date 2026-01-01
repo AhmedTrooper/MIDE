@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { useEditorStore } from "../lib/store";
+import { Input } from "./ui/input";
 import {
   Search,
   File,
@@ -30,7 +31,6 @@ export default function CommandPalette() {
     openFiles,
     setActiveFile,
     closeFile,
-    toggleTerminal,
     projectPath,
     selectedNode,
     setCreationState,
@@ -40,22 +40,22 @@ export default function CommandPalette() {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const handleCreateTrigger = (type: 'file' | 'folder') => {
+  const handleCreateTrigger = (type: "file" | "folder") => {
     if (!projectPath) return;
-    
+
     let parentPath = projectPath;
     if (selectedNode) {
-        if (selectedNode.isDir) {
-            parentPath = selectedNode.path;
-        } else {
-            const separator = selectedNode.path.includes("\\") ? "\\" : "/";
-            const lastIndex = selectedNode.path.lastIndexOf(separator);
-            if (lastIndex !== -1) {
-                parentPath = selectedNode.path.substring(0, lastIndex);
-            }
+      if (selectedNode.isDir) {
+        parentPath = selectedNode.path;
+      } else {
+        const separator = selectedNode.path.includes("\\") ? "\\" : "/";
+        const lastIndex = selectedNode.path.lastIndexOf(separator);
+        if (lastIndex !== -1) {
+          parentPath = selectedNode.path.substring(0, lastIndex);
         }
+      }
     }
-    
+
     setCreationState({ type, parentPath });
   };
 
@@ -98,15 +98,6 @@ export default function CommandPalette() {
       icon: <X size={16} />,
       action: () => {
         if (activeFile) closeFile(activeFile);
-      },
-    },
-    {
-      id: "toggle-terminal",
-      label: "View: Toggle Terminal",
-      shortcut: "Ctrl+`",
-      icon: <Terminal size={16} />,
-      action: () => {
-        toggleTerminal();
       },
     },
     {
@@ -201,10 +192,9 @@ export default function CommandPalette() {
         >
           <div className="flex items-center px-3 py-3 border-b border-[#333]">
             <Search className="text-gray-400 mr-2" size={18} />
-            <input
+            <Input
               ref={inputRef}
-              type="text"
-              className="flex-1 bg-transparent border-none outline-none text-white placeholder-gray-500 text-sm"
+              className="flex-1 bg-transparent border-none text-white placeholder-gray-500 text-sm focus-visible:ring-0 h-auto p-0"
               placeholder="Type a command or search for files..."
               value={query}
               onChange={(e) => {

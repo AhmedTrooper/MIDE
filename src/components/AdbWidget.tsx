@@ -214,32 +214,34 @@ export default function AdbWidget() {
           >
             {/* Tabs */}
             <div className="flex border-b border-[#333]">
-              <button
+              <Button
+                variant="ghost"
                 onClick={() => setActiveTab("devices")}
-                className={`flex-1 px-4 py-2 text-xs font-medium transition-colors ${
+                className={`flex-1 px-4 py-2 text-xs font-medium transition-colors h-auto rounded-none ${
                   activeTab === "devices"
-                    ? "text-white border-b-2 border-blue-500"
-                    : "text-gray-400 hover:text-white"
+                    ? "text-white border-b-2 border-blue-500 bg-transparent hover:bg-transparent"
+                    : "text-gray-400 hover:text-white hover:bg-transparent"
                 }`}
               >
                 <div className="flex items-center justify-center gap-2">
                   <Smartphone size={14} />
                   Devices ({adbDevices.length})
                 </div>
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="ghost"
                 onClick={() => setActiveTab("emulators")}
-                className={`flex-1 px-4 py-2 text-xs font-medium transition-colors ${
+                className={`flex-1 px-4 py-2 text-xs font-medium transition-colors h-auto rounded-none ${
                   activeTab === "emulators"
-                    ? "text-white border-b-2 border-blue-500"
-                    : "text-gray-400 hover:text-white"
+                    ? "text-white border-b-2 border-blue-500 bg-transparent hover:bg-transparent"
+                    : "text-gray-400 hover:text-white hover:bg-transparent"
                 }`}
               >
                 <div className="flex items-center justify-center gap-2">
                   <Monitor size={14} />
                   Emulators ({avdList.length})
                 </div>
-              </button>
+              </Button>
             </div>
 
             {activeTab === "devices" && (

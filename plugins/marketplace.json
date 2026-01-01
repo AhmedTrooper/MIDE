@@ -1,62 +1,7 @@
 {
   "plugins": [
     {
-      "id": "mide.hello-world",
-      "name": "Hello World",
-      "version": "1.0.0",
-      "description": "A simple example plugin that demonstrates the basics",
-      "author": "MIDE Team",
-      "downloads": 1250,
-      "rating": 4.5,
-      "category": "Other",
-      "tags": ["example", "tutorial"]
-    },
-    {
-      "id": "mide.word-counter",
-      "name": "Word Counter",
-      "version": "1.0.0",
-      "description": "Count words, characters, and lines in your documents",
-      "author": "MIDE Team",
-      "downloads": 3420,
-      "rating": 4.7,
-      "category": "Productivity",
-      "tags": ["statistics", "text", "analysis"]
-    },
-    {
-      "id": "mide.file-analyzer",
-      "name": "File Analyzer",
-      "version": "1.0.0",
-      "description": "Analyze file sizes and compare multiple files",
-      "author": "MIDE Team",
-      "downloads": 890,
-      "rating": 4.3,
-      "category": "Utilities",
-      "tags": ["files", "analysis", "comparison"]
-    },
-    {
-      "id": "mide.todo-highlighter",
-      "name": "TODO Highlighter",
-      "version": "1.0.0",
-      "description": "Highlight and track TODO, FIXME, HACK, and NOTE comments",
-      "author": "MIDE Team",
-      "downloads": 5670,
-      "rating": 4.8,
-      "category": "Productivity",
-      "tags": ["todo", "comments", "tracking"]
-    },
-    {
-      "id": "mide.auto-save",
-      "name": "Auto Save",
-      "version": "1.0.0",
-      "description": "Automatically saves files after a period of inactivity",
-      "author": "MIDE Team",
-      "downloads": 8920,
-      "rating": 4.9,
-      "category": "Productivity",
-      "tags": ["save", "automation", "workflow"]
-    },
-    {
-      "id": "mide.prettier-format",
+      "id": "prettier-format",
       "name": "Prettier Code Formatter",
       "version": "1.0.0",
       "description": "Format code using Prettier for JavaScript, TypeScript, JSON, CSS, HTML",
@@ -67,7 +12,7 @@
       "tags": ["formatter", "prettier", "javascript", "typescript"]
     },
     {
-      "id": "mide.git-lens",
+      "id": "git-lens",
       "name": "Git Lens",
       "version": "1.0.0",
       "description": "Supercharge Git - visualize code authorship and explore repositories",
@@ -78,7 +23,7 @@
       "tags": ["git", "version-control", "blame", "history"]
     },
     {
-      "id": "mide.bracket-colorizer",
+      "id": "bracket-pair-colorizer",
       "name": "Bracket Pair Colorizer",
       "version": "1.0.0",
       "description": "Colorize matching brackets to make code more readable",
@@ -87,6 +32,17 @@
       "rating": 4.6,
       "category": "Themes",
       "tags": ["brackets", "colorizer", "readability"]
+    },
+    {
+      "id": "auto-save",
+      "name": "Auto Save",
+      "version": "1.0.0",
+      "description": "Automatically saves files after a period of inactivity",
+      "author": "MIDE Team",
+      "downloads": 8920,
+      "rating": 4.9,
+      "category": "Productivity",
+      "tags": ["save", "automation", "workflow"]
     }
   ]
 }

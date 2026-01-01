@@ -6,6 +6,7 @@ import {
   GitCommit,
   GitBranch,
   GitPullRequest,
+  GitMerge,
   Plus,
   Minus,
   RotateCcw,
@@ -22,6 +23,7 @@ import {
   FileText,
 } from "lucide-react";
 import { Button } from "./ui/button";
+import { Input } from "./ui/input";
 import { Textarea } from "./ui/textarea";
 import { ScrollArea } from "./ui/scroll-area";
 import { Badge } from "./ui/badge";
@@ -39,6 +41,13 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from "./ui/dropdown-menu";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "./ui/select";
 import GitDiffView from "./GitDiffView";
 
 interface GitFile {
@@ -68,11 +77,16 @@ interface GitCommitInfo {
   body: string;
 }
 
+interface GitRemote {
+  name: string;
+  url: string;
+}
 
 type ViewMode =
   | "changes"
   | "history"
   | "branches"
+  | "remotes"
   | "pullrequests"
   | "issues"
   | "actions"
@@ -83,9 +97,23 @@ export default function GitView() {
   const [status, setStatus] = useState<GitStatus | null>(null);
   const [branches, setBranches] = useState<GitBranch[]>([]);
   const [commits, setCommits] = useState<GitCommitInfo[]>([]);
+  const [remotes, setRemotes] = useState<GitRemote[]>([]);
+  const [stashes, setStashes] = useState<string[]>([]);
+  const [tags, setTags] = useState<string[]>([]);
   const [commitMessage, setCommitMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isGitRepo, setIsGitRepo] = useState<boolean | null>(null);
+  const [userName, setUserName] = useState("");
+  const [userEmail, setUserEmail] = useState("");
+  const [showInitDialog, setShowInitDialog] = useState(false);
+  const [showRemoteDialog, setShowRemoteDialog] = useState(false);
+  const [showConfigDialog, setShowConfigDialog] = useState(false);
+  const [newRemoteName, setNewRemoteName] = useState("origin");
+  const [newRemoteUrl, setNewRemoteUrl] = useState("");
+  const [editingRemote, setEditingRemote] = useState<GitRemote | null>(null);
+  const [syncBranch, setSyncBranch] = useState("");
+  const [syncRemote, setSyncRemote] = useState("origin");
   const [viewMode, setViewMode] = useState<ViewMode>("changes");
   const [useGitHubCLI, setUseGitHubCLI] = useState(false);
   const [ghAuthenticated, setGhAuthenticated] = useState(false);
@@ -99,7 +127,8 @@ export default function GitView() {
   });
   const [newBranchName, setNewBranchName] = useState("");
   const [showBranchInput, setShowBranchInput] = useState(false);
-  // Tag management removed
+  const [newTagName, setNewTagName] = useState("");
+  const [showTagInput, setShowTagInput] = useState(false);
   const [diffView, setDiffView] = useState<{
     file: string;
     staged: boolean;
@@ -124,6 +153,146 @@ export default function GitView() {
       }
     }
     throw lastErr;
+  };
+
+  const checkIfGitRepo = async () => {
+    if (!projectPath) return;
+    try {
+      await invokeWithFallback<GitStatus>(
+        ["git_status_full", "git::git_status_full"],
+        { cwd: projectPath }
+      );
+      setIsGitRepo(true);
+      await loadGitConfig();
+    } catch (err) {
+      setIsGitRepo(false);
+    }
+  };
+
+  const loadGitConfig = async () => {
+    if (!projectPath) return;
+    try {
+      const name = await invokeWithFallback<string>(
+        ["git_config_get", "git::git_config_get"],
+        { cwd: projectPath, key: "user.name" }
+      );
+      setUserName(name.trim());
+    } catch {
+      setUserName("");
+    }
+    try {
+      const email = await invokeWithFallback<string>(
+        ["git_config_get", "git::git_config_get"],
+        { cwd: projectPath, key: "user.email" }
+      );
+      setUserEmail(email.trim());
+    } catch {
+      setUserEmail("");
+    }
+  };
+
+  const handleInitGit = async () => {
+    if (!projectPath) return;
+    setIsLoading(true);
+    try {
+      await invokeWithFallback<void>(["git_init", "git::git_init"], {
+        cwd: projectPath,
+      });
+      setIsGitRepo(true);
+      setShowInitDialog(false);
+      await fetchStatus();
+      setError(null);
+    } catch (err) {
+      setError(`Failed to initialize Git: ${err}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSaveConfig = async () => {
+    if (!projectPath) return;
+    setIsLoading(true);
+    try {
+      if (userName) {
+        await invokeWithFallback<void>(
+          ["git_config_set", "git::git_config_set"],
+          { cwd: projectPath, key: "user.name", value: userName }
+        );
+      }
+      if (userEmail) {
+        await invokeWithFallback<void>(
+          ["git_config_set", "git::git_config_set"],
+          { cwd: projectPath, key: "user.email", value: userEmail }
+        );
+      }
+      setShowConfigDialog(false);
+      setError(null);
+    } catch (err) {
+      setError(`Failed to save config: ${err}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleAddRemote = async () => {
+    if (!projectPath || !newRemoteName || !newRemoteUrl) return;
+    setIsLoading(true);
+    try {
+      await invokeWithFallback<void>(
+        ["git_add_remote", "git::git_add_remote"],
+        { cwd: projectPath, name: newRemoteName, url: newRemoteUrl }
+      );
+      await fetchRemotes();
+      setShowRemoteDialog(false);
+      setNewRemoteName("origin");
+      setNewRemoteUrl("");
+      setError(null);
+    } catch (err) {
+      setError(`Failed to add remote: ${err}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleRemoveRemote = async (name: string) => {
+    if (!projectPath || !confirm(`Remove remote '${name}'?`)) return;
+    setIsLoading(true);
+    try {
+      await invokeWithFallback<void>(
+        ["git_remove_remote", "git::git_remove_remote"],
+        { cwd: projectPath, name }
+      );
+      await fetchRemotes();
+      setError(null);
+    } catch (err) {
+      setError(`Failed to remove remote: ${err}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSyncFromRemote = async () => {
+    if (!projectPath || !syncRemote || !syncBranch) return;
+    setIsLoading(true);
+    try {
+      // Fetch from remote
+      await invokeWithFallback<string>(["git_fetch", "git::git_fetch"], {
+        cwd: projectPath,
+      });
+
+      // Pull the specific branch
+      await invokeWithFallback<string>(["git_pull", "git::git_pull"], {
+        cwd: projectPath,
+      });
+
+      await fetchStatus();
+      await fetchBranches();
+      setError(null);
+    } catch (err) {
+      setError(`Failed to sync: ${err}`);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const fetchStatus = async () => {
@@ -167,6 +336,19 @@ export default function GitView() {
       setCommits(commitList);
     } catch (err) {
       console.error("Log error:", err);
+    }
+  };
+
+  const fetchRemotes = async () => {
+    if (!projectPath) return;
+    try {
+      const remoteList = await invokeWithFallback<GitRemote[]>(
+        ["git_remotes", "git::git_remotes"],
+        { cwd: projectPath }
+      );
+      setRemotes(remoteList);
+    } catch (err) {
+      console.error("Remotes error:", err);
     }
   };
 
@@ -469,14 +651,21 @@ export default function GitView() {
   };
 
   useEffect(() => {
-    if (viewMode === "changes") fetchStatus();
-    else if (viewMode === "history") fetchCommits();
-    else if (viewMode === "branches") fetchBranches();
+    if (projectPath) {
+      checkIfGitRepo();
+    }
+  }, [projectPath]);
+
+  useEffect(() => {
+    if (isGitRepo && viewMode === "changes") fetchStatus();
+    else if (isGitRepo && viewMode === "history") fetchCommits();
+    else if (isGitRepo && viewMode === "branches") fetchBranches();
+    else if (isGitRepo && viewMode === "remotes") fetchRemotes();
     else if (viewMode === "pullrequests" && useGitHubCLI) fetchPullRequests();
     else if (viewMode === "issues" && useGitHubCLI) fetchIssues();
     else if (viewMode === "actions" && useGitHubCLI) fetchWorkflows();
     else if (viewMode === "releases" && useGitHubCLI) fetchReleases();
-  }, [projectPath, viewMode, useGitHubCLI]);
+  }, [projectPath, viewMode, useGitHubCLI, isGitRepo]);
 
   useEffect(() => {
     if (useGitHubCLI && projectPath) {
@@ -608,6 +797,7 @@ export default function GitView() {
     if (viewMode === "changes") fetchStatus();
     else if (viewMode === "history") fetchCommits();
     else if (viewMode === "branches") fetchBranches();
+    else if (viewMode === "remotes") fetchRemotes();
   }, [projectPath, viewMode]);
 
   const getStatusIcon = (status: string) => {
@@ -632,6 +822,118 @@ export default function GitView() {
       <div className="flex flex-col items-center justify-center h-full p-4 text-gray-400 text-sm text-center">
         <FolderGit size={48} className="mb-4 opacity-50" />
         <p>Open a folder to use Source Control</p>
+      </div>
+    );
+  }
+
+  if (isGitRepo === false) {
+    return (
+      <div className="flex flex-col h-full bg-[#1e1e1e]">
+        <div className="flex items-center justify-between px-4 py-2 border-b border-[#333]">
+          <span className="text-xs font-bold text-gray-400 uppercase">
+            Source Control
+          </span>
+        </div>
+        <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
+          <FolderGit size={64} className="mb-6 text-gray-600" />
+          <h2 className="text-lg font-semibold text-white mb-2">
+            No Git Repository
+          </h2>
+          <p className="text-sm text-gray-400 mb-6 max-w-md">
+            This folder is not a Git repository. Initialize Git to start version
+            control.
+          </p>
+          <Button
+            onClick={() => setShowInitDialog(true)}
+            className="bg-blue-600 hover:bg-blue-700 mb-4"
+          >
+            <GitBranch size={16} className="mr-2" />
+            Initialize Repository
+          </Button>
+          <Button
+            variant="ghost"
+            onClick={checkIfGitRepo}
+            className="text-gray-400 hover:text-white text-xs"
+          >
+            <RefreshCw size={14} className="mr-2" />
+            Refresh
+          </Button>
+        </div>
+
+        {/* Init Dialog */}
+        {showInitDialog && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+            <div className="w-[500px] bg-[#252526] rounded-lg shadow-2xl border border-[#454545] flex flex-col">
+              <div className="px-4 py-3 border-b border-[#333]">
+                <h2 className="text-sm font-medium text-white">
+                  Initialize Git Repository
+                </h2>
+              </div>
+              <div className="p-4 space-y-4">
+                <p className="text-sm text-gray-400">
+                  This will create a new Git repository in:
+                </p>
+                <div className="bg-[#1e1e1e] p-2 rounded text-xs text-white font-mono">
+                  {projectPath}
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs text-gray-400">User Name</label>
+                  <Input
+                    type="text"
+                    value={userName}
+                    onChange={(e) => setUserName(e.target.value)}
+                    placeholder="Your Name"
+                    className="bg-[#3c3c3c] border-[#555] text-white placeholder:text-gray-500 h-8"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs text-gray-400">User Email</label>
+                  <Input
+                    type="email"
+                    value={userEmail}
+                    onChange={(e) => setUserEmail(e.target.value)}
+                    placeholder="your.email@example.com"
+                    className="bg-[#3c3c3c] border-[#555] text-white placeholder:text-gray-500 h-8"
+                  />
+                </div>
+              </div>
+              <div className="px-4 py-3 border-t border-[#333] flex justify-end gap-2">
+                <Button
+                  variant="secondary"
+                  onClick={() => setShowInitDialog(false)}
+                  className="bg-[#3c3c3c] hover:bg-[#4c4c4c] text-white"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={async () => {
+                    await handleInitGit();
+                    if (userName || userEmail) {
+                      await handleSaveConfig();
+                    }
+                  }}
+                  disabled={isLoading}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  {isLoading ? (
+                    <RefreshCw size={14} className="mr-2 animate-spin" />
+                  ) : (
+                    <GitBranch size={14} className="mr-2" />
+                  )}
+                  Initialize
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  if (isGitRepo === null) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <RefreshCw size={24} className="animate-spin text-gray-400" />
       </div>
     );
   }
@@ -664,6 +966,7 @@ export default function GitView() {
               if (viewMode === "changes") fetchStatus();
               else if (viewMode === "history") fetchCommits();
               else if (viewMode === "branches") fetchBranches();
+              else if (viewMode === "remotes") fetchRemotes();
               else if (viewMode === "pullrequests") fetchPullRequests();
               else if (viewMode === "issues") fetchIssues();
               else if (viewMode === "actions") fetchWorkflows();
@@ -703,6 +1006,13 @@ export default function GitView() {
               >
                 <RefreshCw size={14} className="mr-2" /> Fetch
               </DropdownMenuItem>
+              <DropdownMenuSeparator className="bg-[#454545]" />
+              <DropdownMenuItem
+                onClick={() => setShowConfigDialog(true)}
+                className="hover:bg-[#3e3e42]"
+              >
+                <GitBranch size={14} className="mr-2" /> Configure User
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -733,12 +1043,12 @@ export default function GitView() {
       )}
 
       {/* View Mode Tabs */}
-      <div className="flex border-b border-[#333] bg-[#252526] overflow-x-auto">
+      <div className="flex border-b border-[#333] bg-[#252526] overflow-x-auto flex-shrink-0 pb-3 [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-[#424242] [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb:hover]:bg-[#4e4e4e]">
         {!useGitHubCLI ? (
           <>
             <button
               onClick={() => setViewMode("changes")}
-              className={`px-3 py-2 text-xs font-medium whitespace-nowrap ${
+              className={`px-4 py-3 text-xs font-medium whitespace-nowrap ${
                 viewMode === "changes"
                   ? "text-white border-b-2 border-blue-500"
                   : "text-gray-400 hover:text-white"
@@ -748,7 +1058,7 @@ export default function GitView() {
             </button>
             <button
               onClick={() => setViewMode("history")}
-              className={`px-3 py-2 text-xs font-medium whitespace-nowrap ${
+              className={`px-4 py-3 text-xs font-medium whitespace-nowrap ${
                 viewMode === "history"
                   ? "text-white border-b-2 border-blue-500"
                   : "text-gray-400 hover:text-white"
@@ -758,7 +1068,7 @@ export default function GitView() {
             </button>
             <button
               onClick={() => setViewMode("branches")}
-              className={`px-3 py-2 text-xs font-medium whitespace-nowrap ${
+              className={`px-4 py-3 text-xs font-medium whitespace-nowrap ${
                 viewMode === "branches"
                   ? "text-white border-b-2 border-blue-500"
                   : "text-gray-400 hover:text-white"
@@ -766,12 +1076,22 @@ export default function GitView() {
             >
               <GitBranch size={12} className="inline mr-1" /> Branches
             </button>
+            <button
+              onClick={() => setViewMode("remotes")}
+              className={`px-4 py-3 text-xs font-medium whitespace-nowrap ${
+                viewMode === "remotes"
+                  ? "text-white border-b-2 border-blue-500"
+                  : "text-gray-400 hover:text-white"
+              }`}
+            >
+              <Upload size={12} className="inline mr-1" /> Remotes
+            </button>
           </>
         ) : (
           <>
             <button
               onClick={() => setViewMode("pullrequests")}
-              className={`px-3 py-2 text-xs font-medium whitespace-nowrap ${
+              className={`px-4 py-3 text-xs font-medium whitespace-nowrap ${
                 viewMode === "pullrequests"
                   ? "text-white border-b-2 border-blue-500"
                   : "text-gray-400 hover:text-white"
@@ -781,7 +1101,7 @@ export default function GitView() {
             </button>
             <button
               onClick={() => setViewMode("issues")}
-              className={`px-3 py-2 text-xs font-medium whitespace-nowrap ${
+              className={`px-4 py-3 text-xs font-medium whitespace-nowrap ${
                 viewMode === "issues"
                   ? "text-white border-b-2 border-blue-500"
                   : "text-gray-400 hover:text-white"
@@ -791,7 +1111,7 @@ export default function GitView() {
             </button>
             <button
               onClick={() => setViewMode("actions")}
-              className={`px-3 py-2 text-xs font-medium whitespace-nowrap ${
+              className={`px-4 py-3 text-xs font-medium whitespace-nowrap ${
                 viewMode === "actions"
                   ? "text-white border-b-2 border-blue-500"
                   : "text-gray-400 hover:text-white"
@@ -801,7 +1121,7 @@ export default function GitView() {
             </button>
             <button
               onClick={() => setViewMode("releases")}
-              className={`px-3 py-2 text-xs font-medium whitespace-nowrap ${
+              className={`px-4 py-3 text-xs font-medium whitespace-nowrap ${
                 viewMode === "releases"
                   ? "text-white border-b-2 border-blue-500"
                   : "text-gray-400 hover:text-white"
@@ -828,10 +1148,10 @@ export default function GitView() {
 
       {/* Content Area */}
       {viewMode === "changes" && (
-        <>
+        <div className="flex-1 flex flex-col min-h-0">
           {/* Commit Section */}
           {(stagedFiles.length > 0 || unstagedFiles.length > 0) && (
-            <div className="p-2 border-b border-[#333] space-y-2">
+            <div className="p-2 border-b border-[#333] space-y-2 flex-shrink-0">
               <Textarea
                 className="min-h-20 bg-[#3c3c3c] border-[#333] focus-visible:ring-[#007fd4] resize-none text-xs text-white placeholder:text-gray-500"
                 placeholder="Commit message (Ctrl+Enter to commit)"
@@ -902,7 +1222,7 @@ export default function GitView() {
             </div>
           )}
 
-          <ScrollArea className="flex-1">
+          <ScrollArea className="flex-1 min-h-0">
             {/* Staged Files */}
             {stagedFiles.length > 0 && (
               <div className="py-2">
@@ -1108,7 +1428,7 @@ export default function GitView() {
               </div>
             )}
           </ScrollArea>
-        </>
+        </div>
       )}
 
       {viewMode === "history" && (
@@ -1151,7 +1471,7 @@ export default function GitView() {
           <div className="p-2 border-b border-[#333]">
             {showBranchInput ? (
               <div className="flex gap-2">
-                <input
+                <Input
                   type="text"
                   value={newBranchName}
                   onChange={(e) => setNewBranchName(e.target.value)}
@@ -1163,7 +1483,7 @@ export default function GitView() {
                     }
                   }}
                   placeholder="Branch name..."
-                  className="flex-1 px-2 py-1 bg-[#3c3c3c] border border-[#333] rounded text-xs text-white"
+                  className="flex-1 bg-[#3c3c3c] border-[#555] text-white placeholder:text-gray-500 h-7 text-xs"
                   autoFocus
                 />
                 <Button
@@ -1246,6 +1566,117 @@ export default function GitView() {
                 </ContextMenuContent>
               </ContextMenu>
             ))}
+          </ScrollArea>
+        </>
+      )}
+
+      {/* Remotes View */}
+      {viewMode === "remotes" && (
+        <>
+          <div className="p-2 border-b border-[#333] space-y-2">
+            <Button
+              onClick={() => setShowRemoteDialog(true)}
+              className="w-full h-7 text-xs bg-[#007fd4] hover:bg-[#006bb3]"
+            >
+              <Plus size={14} className="mr-2" /> Add Remote
+            </Button>
+            {remotes.length > 0 && (
+              <div className="space-y-2">
+                <label className="text-xs text-gray-400 block">
+                  Quick Sync
+                </label>
+                <div className="flex gap-2">
+                  <Select
+                    value={syncRemote}
+                    onValueChange={(value) => setSyncRemote(value)}
+                  >
+                    <SelectTrigger className="flex-1 bg-[#3c3c3c] border-[#555] text-white h-7 text-xs w-full">
+                      <SelectValue placeholder="Select remote" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-[#2d2d30] border-[#454545] text-white">
+                      {remotes.map((r) => (
+                        <SelectItem
+                          key={r.name}
+                          value={r.name}
+                          className="hover:bg-[#3e3e42] focus:bg-[#3e3e42] cursor-pointer"
+                        >
+                          {r.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Input
+                    type="text"
+                    value={syncBranch}
+                    onChange={(e) => setSyncBranch(e.target.value)}
+                    placeholder="branch"
+                    className="flex-1 bg-[#3c3c3c] border-[#555] text-white placeholder:text-gray-500 h-7 text-xs"
+                  />
+                  <Button
+                    onClick={handleSyncFromRemote}
+                    disabled={!syncBranch || isLoading}
+                    className="h-7 px-2 text-xs bg-blue-600 hover:bg-blue-700"
+                    title="Fetch and pull from remote branch"
+                  >
+                    <Download size={14} />
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+          <ScrollArea className="flex-1">
+            {remotes.length === 0 ? (
+              <div className="p-4 text-center text-gray-400 text-xs">
+                No remotes configured
+              </div>
+            ) : (
+              <div className="py-2">
+                {remotes.map((remote, index) => (
+                  <ContextMenu key={remote.name || `remote-${index}`}>
+                    <ContextMenuTrigger asChild>
+                      <div className="px-4 py-3 hover:bg-[#2a2d2e] border-b border-[#333] cursor-pointer">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-sm font-medium text-white">
+                            {remote.name}
+                          </span>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRemoveRemote(remote.name);
+                            }}
+                            className="h-6 w-6 text-gray-400 hover:text-red-400 opacity-0 group-hover:opacity-100"
+                          >
+                            <X size={12} />
+                          </Button>
+                        </div>
+                        <div className="text-xs text-gray-400 font-mono break-all">
+                          {remote.url}
+                        </div>
+                      </div>
+                    </ContextMenuTrigger>
+                    <ContextMenuContent className="bg-[#2d2d30] border-[#454545] text-white">
+                      <ContextMenuItem
+                        onClick={() =>
+                          navigator.clipboard.writeText(remote.url)
+                        }
+                        className="hover:bg-[#3e3e42]"
+                      >
+                        Copy URL
+                      </ContextMenuItem>
+                      <ContextMenuSeparator className="bg-[#454545]" />
+                      <ContextMenuItem
+                        onClick={() => handleRemoveRemote(remote.name)}
+                        className="hover:bg-[#3e3e42] text-red-400"
+                      >
+                        <X size={14} className="mr-2" /> Remove
+                      </ContextMenuItem>
+                    </ContextMenuContent>
+                  </ContextMenu>
+                ))}
+              </div>
+            )}
           </ScrollArea>
         </>
       )}
@@ -1481,6 +1912,134 @@ export default function GitView() {
           staged={diffView.staged}
           onClose={() => setDiffView(null)}
         />
+      )}
+
+      {/* Config Dialog */}
+      {showConfigDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="w-[500px] bg-[#252526] rounded-lg shadow-2xl border border-[#454545] flex flex-col">
+            <div className="px-4 py-3 border-b border-[#333]">
+              <h2 className="text-sm font-medium text-white">
+                Git User Configuration
+              </h2>
+            </div>
+            <div className="p-4 space-y-4">
+              <div className="space-y-2">
+                <label className="text-xs text-gray-400">User Name</label>
+                <Input
+                  type="text"
+                  value={userName}
+                  onChange={(e) => setUserName(e.target.value)}
+                  placeholder="Your Name"
+                  className="bg-[#3c3c3c] border-[#555] text-white placeholder:text-gray-500 h-8"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs text-gray-400">User Email</label>
+                <Input
+                  type="email"
+                  value={userEmail}
+                  onChange={(e) => setUserEmail(e.target.value)}
+                  placeholder="your.email@example.com"
+                  className="bg-[#3c3c3c] border-[#555] text-white placeholder:text-gray-500 h-8"
+                />
+              </div>
+              <p className="text-xs text-gray-500">
+                These settings will be saved for this repository.
+              </p>
+            </div>
+            <div className="px-4 py-3 border-t border-[#333] flex justify-end gap-2">
+              <Button
+                variant="secondary"
+                onClick={() => setShowConfigDialog(false)}
+                className="bg-[#3c3c3c] hover:bg-[#4c4c4c] text-white"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSaveConfig}
+                disabled={isLoading || (!userName && !userEmail)}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                {isLoading ? (
+                  <RefreshCw size={14} className="mr-2 animate-spin" />
+                ) : (
+                  <Check size={14} className="mr-2" />
+                )}
+                Save
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Remote Dialog */}
+      {showRemoteDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="w-[500px] bg-[#252526] rounded-lg shadow-2xl border border-[#454545] flex flex-col">
+            <div className="px-4 py-3 border-b border-[#333]">
+              <h2 className="text-sm font-medium text-white">
+                Add Remote Repository
+              </h2>
+            </div>
+            <div className="p-4 space-y-4">
+              <div className="space-y-2">
+                <label className="text-xs text-gray-400">Remote Name</label>
+                <Input
+                  type="text"
+                  value={newRemoteName}
+                  onChange={(e) => setNewRemoteName(e.target.value)}
+                  placeholder="origin"
+                  className="bg-[#3c3c3c] border-[#555] text-white placeholder:text-gray-500 h-8"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs text-gray-400">Remote URL</label>
+                <Input
+                  type="text"
+                  value={newRemoteUrl}
+                  onChange={(e) => setNewRemoteUrl(e.target.value)}
+                  placeholder="https://github.com/user/repo.git"
+                  className="bg-[#3c3c3c] border-[#555] text-white placeholder:text-gray-500 h-8 font-mono"
+                />
+              </div>
+              <div className="bg-[#1e1e1e] p-3 rounded text-xs space-y-1">
+                <div className="text-gray-400">Examples:</div>
+                <div className="text-gray-500 font-mono">
+                  https://github.com/user/repo.git
+                </div>
+                <div className="text-gray-500 font-mono">
+                  git@github.com:user/repo.git
+                </div>
+              </div>
+            </div>
+            <div className="px-4 py-3 border-t border-[#333] flex justify-end gap-2">
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setShowRemoteDialog(false);
+                  setNewRemoteName("origin");
+                  setNewRemoteUrl("");
+                }}
+                className="bg-[#3c3c3c] hover:bg-[#4c4c4c] text-white"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleAddRemote}
+                disabled={isLoading || !newRemoteName || !newRemoteUrl}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                {isLoading ? (
+                  <RefreshCw size={14} className="mr-2 animate-spin" />
+                ) : (
+                  <Plus size={14} className="mr-2" />
+                )}
+                Add Remote
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

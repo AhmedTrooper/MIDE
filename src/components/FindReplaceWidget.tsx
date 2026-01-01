@@ -10,6 +10,7 @@ import {
   Regex,
 } from "lucide-react";
 import { Button } from "./ui/button";
+import { Input } from "./ui/input";
 import { motion, AnimatePresence } from "motion/react";
 
 interface FindReplaceWidgetProps {
@@ -90,14 +91,14 @@ export default function FindReplaceWidget({
         {/* Find Row */}
         <div className="flex items-center gap-1 p-2 border-b border-[#333]">
           <div className="flex-1 flex items-center bg-[#3c3c3c] border border-[#3c3c3c] focus-within:border-[#007fd4] rounded">
-            <input
+            <Input
               ref={findInputRef}
               type="text"
               value={findValue}
               onChange={(e) => setFindValue(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="Find"
-              className="flex-1 bg-transparent px-2 py-1 text-sm text-white outline-none"
+              className="flex-1 bg-transparent border-0 shadow-none px-2 py-1 text-sm text-white placeholder:text-gray-500 h-7 focus-visible:ring-0"
             />
             {matchCount && findValue && (
               <span className="text-xs text-gray-400 px-2">
@@ -188,13 +189,13 @@ export default function FindReplaceWidget({
         {isReplaceMode && (
           <div className="flex items-center gap-1 p-2">
             <div className="flex-1 flex items-center bg-[#3c3c3c] border border-[#3c3c3c] focus-within:border-[#007fd4] rounded">
-              <input
+              <Input
                 type="text"
                 value={replaceValue}
                 onChange={(e) => setReplaceValue(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder="Replace"
-                className="flex-1 bg-transparent px-2 py-1 text-sm text-white outline-none"
+                className="flex-1 bg-transparent border-0 shadow-none px-2 py-1 text-sm text-white placeholder:text-gray-500 h-7 focus-visible:ring-0"
               />
             </div>
 
