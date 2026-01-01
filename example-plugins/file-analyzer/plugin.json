@@ -1,0 +1,32 @@
+{
+  "id": "file-analyzer",
+  "name": "File Size Analyzer",
+  "version": "1.0.0",
+  "description": "Analyze file sizes and get detailed information about your workspace",
+  "author": "MIDE Team",
+  "type": "js",
+  "main": "index.js",
+  "activation_events": ["onStartup"],
+  "contributes": {
+    "commands": [
+      {
+        "id": "file-analyzer.analyzeFile",
+        "title": "Analyze Current File Size",
+        "category": "File Analyzer"
+      },
+      {
+        "id": "file-analyzer.compareFiles",
+        "title": "Compare Open Files",
+        "category": "File Analyzer"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "file-analyzer.analyzeFile",
+        "key": "Ctrl+Shift+A"
+      }
+    ]
+  },
+  "permissions": ["fs:read", "editor:read"],
+  "enabled": true
+}

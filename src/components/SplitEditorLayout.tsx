@@ -2,7 +2,16 @@ import { useEditorStore } from "../lib/store";
 import CodeEditor, { type CodeEditorHandle } from "./ui/CodeEditor";
 import FindReplaceWidget, { type FindOptions } from "./FindReplaceWidget";
 import { Button } from "./ui/button";
-import { X, ArrowLeftRight, ArrowUpDown, XCircle } from "lucide-react";
+import { X, ArrowLeftRight, ArrowUpDown, XCircle, Save } from "lucide-react";
+import { invoke } from "@tauri-apps/api/core";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "./ui/dialog";
 import {
   ResizablePanelGroup,
   ResizablePanel,
@@ -36,6 +45,8 @@ function EditorPane({ groupId }: EditorPaneProps) {
     current: number;
     total: number;
   }>();
+  const [fileToClose, setFileToClose] = useState<string | null>(null);
+  const [isCloseDialogOpen, setIsCloseDialogOpen] = useState(false);
 
   const group = editorGroups.find((g) => g.id === groupId);
   const activeFileObj = openFiles.find((f) => f.path === group?.activeFile);
@@ -85,6 +96,52 @@ function EditorPane({ groupId }: EditorPaneProps) {
     }
   };
 
+  const handleSave = async () => {
+    if (!activeFileObj) return;
+    try {
+      await invoke("save_file_content", {
+        path: activeFileObj.path,
+        content: activeFileObj.content,
+      });
+      markFileDirty(activeFileObj.path, false);
+    } catch (err) {
+      console.error("Failed to save:", err);
+    }
+  };
+
+  const handleCloseFile = (filePath: string) => {
+    const file = openFiles.find((f) => f.path === filePath);
+    if (file?.isDirty) {
+      setFileToClose(filePath);
+      setIsCloseDialogOpen(true);
+    } else {
+      closeFile(filePath);
+    }
+  };
+
+  const handleConfirmClose = async (saveFirst: boolean) => {
+    if (!fileToClose) return;
+
+    if (saveFirst) {
+      const file = openFiles.find((f) => f.path === fileToClose);
+      if (file) {
+        try {
+          await invoke("save_file_content", {
+            path: file.path,
+            content: file.content,
+          });
+          markFileDirty(file.path, false);
+        } catch (err) {
+          console.error("Failed to save:", err);
+        }
+      }
+    }
+
+    closeFile(fileToClose);
+    setIsCloseDialogOpen(false);
+    setFileToClose(null);
+  };
+
   return (
     <div
       className={`flex flex-col h-full bg-[#1e1e1e] border-2 transition-colors ${
@@ -94,18 +151,19 @@ function EditorPane({ groupId }: EditorPaneProps) {
     >
       {/* Tabs */}
       <div className="flex bg-[#252526] overflow-x-auto scrollbar-hide h-9 border-b border-[#1e1e1e]">
-        {openFiles.map((file) => (
-          <motion.div
-            key={file.path}
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            onClick={(e) => {
-              e.stopPropagation();
-              setGroupActiveFile(groupId, file.path);
-              setActiveGroup(groupId);
-            }}
-            className={`
+        <div className="flex flex-1 overflow-x-auto">
+          {openFiles.map((file) => (
+            <motion.div
+              key={file.path}
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              onClick={(e) => {
+                e.stopPropagation();
+                setGroupActiveFile(groupId, file.path);
+                setActiveGroup(groupId);
+              }}
+              className={`
               group flex items-center gap-2 px-3 text-sm cursor-pointer border-r border-[#1e1e1e] min-w-[120px] max-w-[200px] select-none
               ${
                 group?.activeFile === file.path
@@ -113,26 +171,56 @@ function EditorPane({ groupId }: EditorPaneProps) {
                   : "bg-[#2d2d2d] text-gray-400 hover:bg-[#2a2d2e]"
               }
             `}
-          >
-            <span className="truncate flex-1">{file.name}</span>
-            <div className="flex items-center justify-center w-5 h-5 relative">
-              {file.isDirty && (
-                <div className="w-2 h-2 rounded-full bg-white absolute group-hover:opacity-0" />
-              )}
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  closeFile(file.path);
-                }}
-                className="h-5 w-5 hover:bg-[#444] rounded p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
-              >
-                <X size={14} />
-              </Button>
-            </div>
-          </motion.div>
-        ))}
+            >
+              <span className="truncate flex-1">{file.name}</span>
+              <div className="flex items-center justify-center w-5 h-5 relative">
+                {file.isDirty && (
+                  <div className="w-2 h-2 rounded-full bg-white absolute group-hover:opacity-0 transition-opacity" />
+                )}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleCloseFile(file.path);
+                  }}
+                  className="h-5 w-5 hover:bg-[#c42b1c] hover:text-white rounded p-0.5 opacity-0 group-hover:opacity-100 transition-all"
+                >
+                  <X size={14} />
+                </Button>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+
+        {/* Save Button */}
+        {activeFileObj && (
+          <div className="flex items-center px-2 border-l border-[#1e1e1e] bg-[#252526]">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleSave();
+              }}
+              disabled={!activeFileObj.isDirty}
+              className={`h-7 px-3 flex items-center gap-2 text-xs transition-colors ${
+                activeFileObj.isDirty
+                  ? "text-white hover:bg-[#094771] hover:text-white"
+                  : "text-gray-600 cursor-not-allowed"
+              }`}
+              title={
+                activeFileObj.isDirty ? "Save (Ctrl+S)" : "No changes to save"
+              }
+            >
+              <Save
+                size={14}
+                className={activeFileObj.isDirty ? "text-green-500" : ""}
+              />
+              <span>Save</span>
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Editor */}
@@ -155,10 +243,10 @@ function EditorPane({ groupId }: EditorPaneProps) {
             ref={editorRef}
             code={activeFileObj.content}
             language={activeFileObj.language}
+            filePath={activeFileObj.path}
             onChange={(value) => {
               if (value !== undefined) {
-                updateFileContent(activeFileObj.path, value);
-                markFileDirty(activeFileObj.path, true);
+                updateFileContent(activeFileObj.path, value, true);
               }
             }}
           />
@@ -190,6 +278,48 @@ function EditorPane({ groupId }: EditorPaneProps) {
           </div>
         )}
       </div>
+
+      {/* Unsaved Changes Dialog */}
+      <Dialog open={isCloseDialogOpen} onOpenChange={setIsCloseDialogOpen}>
+        <DialogContent className="sm:max-w-[425px] bg-[#252526] text-white border-[#454545]">
+          <DialogHeader>
+            <DialogTitle>Unsaved Changes</DialogTitle>
+            <DialogDescription className="text-gray-400">
+              Do you want to save the changes you made to{" "}
+              <span className="text-white font-medium">
+                {fileToClose &&
+                  openFiles.find((f) => f.path === fileToClose)?.name}
+              </span>
+              ?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setIsCloseDialogOpen(false);
+                setFileToClose(null);
+              }}
+              className="bg-[#3c3c3c] hover:bg-[#505050] text-white"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={() => handleConfirmClose(false)}
+              className="bg-[#3c3c3c] hover:bg-[#c42b1c] text-white"
+            >
+              Don't Save
+            </Button>
+            <Button
+              onClick={() => handleConfirmClose(true)}
+              className="bg-[#0e639c] hover:bg-[#1177bb] text-white"
+            >
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

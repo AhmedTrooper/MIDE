@@ -14,6 +14,7 @@ import CommandPalette from "./CommandPalette";
 import Terminal from "./Terminal";
 import GitView from "./GitView";
 import SplitEditorLayout from "./SplitEditorLayout";
+import PluginManagerView from "./PluginManagerView";
 import { Button } from "./ui/button";
 
 export default function EditorLayout() {
@@ -32,6 +33,7 @@ export default function EditorLayout() {
     splitEditorHorizontal,
     splitEditorVertical,
     splitDirection,
+    updateFileContent,
   } = useEditorStore();
 
   const activeFileObj = openFiles.find((f) => f.path === activeFile);
@@ -57,10 +59,10 @@ export default function EditorLayout() {
     try {
       // Load content asynchronously
       const content = await invoke<string>("read_file_content", { path });
-      updateFileContent(path, content);
+      updateFileContent(path, content, false); // false = don't mark as dirty when loading from disk
     } catch (err) {
       console.error("Error reading file:", err);
-      updateFileContent(path, `// Error loading file: ${err}`);
+      updateFileContent(path, `// Error loading file: ${err}`, false);
     }
   };
 
@@ -85,7 +87,6 @@ export default function EditorLayout() {
         language: activeFileObj.language,
       });
       // Update the file content with formatted code
-      const { updateFileContent } = useEditorStore.getState();
       updateFileContent(activeFileObj.path, formatted);
     } catch (err) {
       console.error("Format failed:", err);
@@ -173,11 +174,16 @@ export default function EditorLayout() {
         {activeView === "search" && !isSidebarCollapsed && <SearchView />}
         {activeView === "git" && !isSidebarCollapsed && <GitView />}
         {activeView === "todos" && !isSidebarCollapsed && <TodoView />}
+        {activeView === "extensions" && !isSidebarCollapsed && (
+          <PluginManagerView />
+        )}
 
         {/* Main Editor Area */}
         <div className="flex-1 flex flex-col min-w-0 bg-[#1e1e1e]">
           {activeView === "settings" ? (
             <SettingsView />
+          ) : activeView === "extensions" ? (
+            <div className="h-full" />
           ) : (
             <>
               {/* Split Editor Controls Bar */}

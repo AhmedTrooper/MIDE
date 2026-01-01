@@ -1,0 +1,32 @@
+{
+  "id": "word-counter",
+  "name": "Word Counter",
+  "version": "1.0.0",
+  "description": "Count words, characters, and lines in your files with detailed statistics",
+  "author": "MIDE Team",
+  "type": "js",
+  "main": "index.js",
+  "activation_events": ["onStartup"],
+  "contributes": {
+    "commands": [
+      {
+        "id": "word-counter.count",
+        "title": "Show Document Statistics",
+        "category": "Word Counter"
+      },
+      {
+        "id": "word-counter.countSelection",
+        "title": "Count Selected Text",
+        "category": "Word Counter"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "word-counter.count",
+        "key": "Ctrl+Shift+W"
+      }
+    ]
+  },
+  "permissions": ["fs:read", "editor:read"],
+  "enabled": true
+}

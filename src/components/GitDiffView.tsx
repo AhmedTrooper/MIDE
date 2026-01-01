@@ -123,13 +123,7 @@ export default function GitDiffView({
       <div className="bg-[#1e1e1e] border border-[#333] rounded-lg w-[90%] h-[90%] flex flex-col shadow-2xl">
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-[#333]">
-          <div className="flex flex-col">
-            <h2 className="text-sm font-semibold text-white">{file}</h2>
-            <span className="text-xs text-gray-400">
-              {staged ? "Staged Changes" : "Unstaged Changes"}
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <Button
               variant="ghost"
               size="icon"
@@ -139,6 +133,14 @@ export default function GitDiffView({
             >
               {copied ? <Check size={16} /> : <Copy size={16} />}
             </Button>
+            <div className="flex flex-col">
+              <h2 className="text-sm font-semibold text-white">{file}</h2>
+              <span className="text-xs text-gray-400">
+                {staged ? "Staged Changes" : "Unstaged Changes"}
+              </span>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
             <Button
               variant="ghost"
               size="icon"

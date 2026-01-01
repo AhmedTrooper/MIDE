@@ -40,6 +40,7 @@ console.error = (...args: any[]) => {
 interface CodeEditorProps {
   code: string;
   language?: string;
+  filePath?: string;
   onChange?: (value: string | undefined) => void;
 }
 
@@ -48,7 +49,7 @@ export interface CodeEditorHandle {
 }
 
 const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(
-  ({ code, language = "javascript", onChange }, ref) => {
+  ({ code, language = "javascript", filePath, onChange }, ref) => {
     const { settings } = useSettingsStore();
     const editorRef = useRef<any>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -67,6 +68,9 @@ const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(
         monaco.languages.typescript.javascriptDefaults.setDiagnosticsOptions({
           noSemanticValidation: false,
           noSyntaxValidation: false,
+          diagnosticCodesToIgnore: [
+            2307, 2552, 2304, 2874, 2584, 2693, 2339, 2580,
+          ], // Ignore module, React, DOM, and property errors
         });
 
         monaco.languages.typescript.javascriptDefaults.setCompilerOptions({
@@ -74,18 +78,24 @@ const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(
           allowNonTsExtensions: true,
           moduleResolution:
             monaco.languages.typescript.ModuleResolutionKind.NodeJs,
-          module: monaco.languages.typescript.ModuleKind.CommonJS,
+          module: monaco.languages.typescript.ModuleKind.ESNext,
           noEmit: true,
           esModuleInterop: true,
           jsx: monaco.languages.typescript.JsxEmit.React,
           reactNamespace: "React",
           allowJs: true,
+          skipLibCheck: true,
+          skipDefaultLibCheck: true,
           typeRoots: ["node_modules/@types"],
+          lib: ["ES2020", "DOM", "DOM.Iterable", "WebWorker"],
         });
 
         monaco.languages.typescript.typescriptDefaults.setDiagnosticsOptions({
           noSemanticValidation: false,
           noSyntaxValidation: false,
+          diagnosticCodesToIgnore: [
+            2307, 2552, 2304, 2874, 2584, 2693, 2339, 2580,
+          ], // Ignore module, React, DOM, and property errors
         });
 
         monaco.languages.typescript.typescriptDefaults.setCompilerOptions({
@@ -93,12 +103,15 @@ const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(
           allowNonTsExtensions: true,
           moduleResolution:
             monaco.languages.typescript.ModuleResolutionKind.NodeJs,
-          module: monaco.languages.typescript.ModuleKind.CommonJS,
+          module: monaco.languages.typescript.ModuleKind.ESNext,
           noEmit: true,
           esModuleInterop: true,
-          jsx: monaco.languages.typescript.JsxEmit.ReactJSX,
+          jsx: monaco.languages.typescript.JsxEmit.React,
           allowJs: true,
+          skipLibCheck: true,
+          skipDefaultLibCheck: true,
           typeRoots: ["node_modules/@types"],
+          lib: ["ES2020", "DOM", "DOM.Iterable", "WebWorker"],
         });
 
         // Configure other languages
@@ -183,7 +196,7 @@ const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(
         <Editor
           height="100%"
           theme={settings.theme}
-          path={language} // Helps with intellisense for same-file switching
+          path={filePath || `file.${language}`} // Use actual file path for proper language detection
           defaultLanguage={language}
           language={language}
           value={code}
@@ -263,6 +276,7 @@ CodeEditor.displayName = "CodeEditor";
 export default memo(CodeEditor, (prevProps, nextProps) => {
   return (
     prevProps.code === nextProps.code &&
-    prevProps.language === nextProps.language
+    prevProps.language === nextProps.language &&
+    prevProps.filePath === nextProps.filePath
   );
 });

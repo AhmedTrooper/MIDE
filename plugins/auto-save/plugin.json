@@ -1,0 +1,35 @@
+{
+  "id": "mide.auto-save",
+  "name": "Auto Save",
+  "version": "1.0.0",
+  "description": "Automatically saves files after a period of inactivity",
+  "author": "MIDE Team",
+  "type": "js",
+  "main": "index.js",
+  "activation_events": ["*"],
+  "contributes": {
+    "commands": [
+      {
+        "id": "auto-save.toggle",
+        "title": "Toggle Auto Save"
+      },
+      {
+        "id": "auto-save.setDelay",
+        "title": "Set Auto Save Delay"
+      }
+    ],
+    "configuration": {
+      "enabled": {
+        "type": "boolean",
+        "default": true,
+        "description": "Enable auto-save"
+      },
+      "delay": {
+        "type": "number",
+        "default": 2000,
+        "description": "Auto-save delay in milliseconds"
+      }
+    }
+  },
+  "permissions": ["fs:write", "editor:read"]
+}

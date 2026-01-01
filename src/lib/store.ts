@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import { type FileNode } from '../components/ui/FileTree';
+import { pluginEvents } from './pluginStore';
 
 export interface OpenFile {
     path: string;
@@ -83,8 +84,9 @@ interface EditorState {
     openFile: (file: OpenFile) => void;
     closeFile: (path: string) => void;
     setActiveFile: (path: string) => void;
-    updateFileContent: (path: string, content: string) => void;
+    updateFileContent: (path: string, content: string, markDirty?: boolean) => void;
     markFileDirty: (path: string, isDirty: boolean) => void;
+    renameFile: (oldPath: string, newPath: string) => void;
     refreshTree: () => Promise<void>;
     openProjectDialog: () => Promise<void>;
     openProjectByPath: (path: string) => Promise<void>;
@@ -269,12 +271,26 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         }
     },
 
-    openFile: (file) => set((state) => {
-        const exists = state.openFiles.find((f) => f.path === file.path);
-        const newActiveFile = file.path;
+    openFile: (file) => {
+        // Emit file open event for plugins
+        pluginEvents.emit('file:open', file.path);
 
-        if (exists) {
+        set((state) => {
+            const exists = state.openFiles.find((f) => f.path === file.path);
+            const newActiveFile = file.path;
+
+            if (exists) {
+                return {
+                    activeFile: newActiveFile,
+                    editorGroups: state.editorGroups.map(group =>
+                        group.id === state.activeGroupId
+                            ? { ...group, activeFile: newActiveFile }
+                            : group
+                    )
+                };
+            }
             return {
+                openFiles: [...state.openFiles, file],
                 activeFile: newActiveFile,
                 editorGroups: state.editorGroups.map(group =>
                     group.id === state.activeGroupId
@@ -282,17 +298,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
                         : group
                 )
             };
-        }
-        return {
-            openFiles: [...state.openFiles, file],
-            activeFile: newActiveFile,
-            editorGroups: state.editorGroups.map(group =>
-                group.id === state.activeGroupId
-                    ? { ...group, activeFile: newActiveFile }
-                    : group
-            )
-        };
-    }),
+        });
+    },
 
     closeFile: (path) => set((state) => {
         const newOpenFiles = state.openFiles.filter((f) => f.path !== path);
@@ -317,15 +324,44 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         )
     })),
 
-    updateFileContent: (path, content) => set((state) => ({
-        openFiles: state.openFiles.map((f) =>
-            f.path === path ? { ...f, content, isDirty: true } : f
-        )
-    })),
+    updateFileContent: (path, content, markDirty = true) => {
+        // Emit file change event for plugins
+        pluginEvents.emit('file:change', path, content);
+
+        set((state) => ({
+            openFiles: state.openFiles.map((f) =>
+                f.path === path ? { ...f, content, isDirty: markDirty ? true : f.isDirty } : f
+            )
+        }));
+    },
 
     markFileDirty: (path, isDirty) => set((state) => ({
         openFiles: state.openFiles.map((f) =>
             f.path === path ? { ...f, isDirty } : f
         )
     })),
+
+    renameFile: (oldPath, newPath) => set((state) => {
+        const fileToRename = state.openFiles.find(f => f.path === oldPath);
+        if (!fileToRename) return state;
+
+        const newName = newPath.split(/[\/\\]/).pop() || newPath;
+        const newOpenFiles = state.openFiles.map(f =>
+            f.path === oldPath
+                ? { ...f, path: newPath, name: newName }
+                : f
+        );
+
+        const newActiveFile = state.activeFile === oldPath ? newPath : state.activeFile;
+
+        return {
+            openFiles: newOpenFiles,
+            activeFile: newActiveFile,
+            editorGroups: state.editorGroups.map(group =>
+                group.activeFile === oldPath
+                    ? { ...group, activeFile: newPath }
+                    : group
+            )
+        };
+    }),
 }));

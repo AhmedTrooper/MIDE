@@ -126,6 +126,11 @@ const FileTreeNode = ({ node, onSelect, level = 0 }: FileTreeProps) => {
       const newPath = `${parentPath}${separator}${renameValue}`;
 
       await invoke("rename_item", { oldPath: node.path, newPath });
+
+      // Update open files in store if this file is open
+      const { renameFile } = useEditorStore.getState();
+      renameFile(node.path, newPath);
+
       await refreshTree();
       setIsRenameOpen(false);
     } catch (err) {

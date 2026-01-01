@@ -1,0 +1,31 @@
+{
+  "id": "mide.git-lens",
+  "name": "Git Lens",
+  "version": "1.0.0",
+  "description": "Supercharge Git within MIDE - visualize code authorship, explore Git repositories, and more",
+  "author": "MIDE Team",
+  "type": "js",
+  "main": "index.js",
+  "activation_events": ["*"],
+  "contributes": {
+    "commands": [
+      {
+        "id": "gitlens.showFileHistory",
+        "title": "Show File History"
+      },
+      {
+        "id": "gitlens.showLineBlame",
+        "title": "Show Line Blame"
+      },
+      {
+        "id": "gitlens.compareWithPrevious",
+        "title": "Compare with Previous Revision"
+      },
+      {
+        "id": "gitlens.showFileAuthors",
+        "title": "Show File Authors"
+      }
+    ]
+  },
+  "permissions": ["fs:read", "shell:execute", "editor:read"]
+}

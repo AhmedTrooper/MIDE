@@ -17,12 +17,8 @@ fn get_file_tree_recursive(path: &Path) -> Option<FileNode> {
         if let Ok(entries) = fs::read_dir(path) {
             for entry in entries.flatten() {
                 let entry_path = entry.path();
-                let entry_name = entry.file_name().to_string_lossy().to_string();
 
-                // SKIP heavy folders to prevent freezing
-                if entry_name == "node_modules" || entry_name == ".git" {
-                    continue;
-                }
+                // Show all files and folders including hidden ones (.git, .github, etc.)
 
                 if let Some(node) = get_file_tree_recursive(&entry_path) {
                     child_nodes.push(node);

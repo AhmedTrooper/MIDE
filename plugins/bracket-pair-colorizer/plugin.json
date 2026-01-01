@@ -1,0 +1,35 @@
+{
+  "id": "mide.bracket-colorizer",
+  "name": "Bracket Pair Colorizer",
+  "version": "1.0.0",
+  "description": "Colorize matching brackets to make code more readable",
+  "author": "MIDE Team",
+  "type": "js",
+  "main": "index.js",
+  "activation_events": ["*"],
+  "contributes": {
+    "commands": [
+      {
+        "id": "bracketColorizer.toggle",
+        "title": "Toggle Bracket Colorization"
+      },
+      {
+        "id": "bracketColorizer.refresh",
+        "title": "Refresh Bracket Colors"
+      }
+    ],
+    "configuration": {
+      "enabled": {
+        "type": "boolean",
+        "default": true,
+        "description": "Enable bracket colorization"
+      },
+      "colors": {
+        "type": "array",
+        "default": ["#ffd700", "#da70d6", "#179fff"],
+        "description": "Colors for bracket pairs"
+      }
+    }
+  },
+  "permissions": ["editor:read", "editor:decorate"]
+}

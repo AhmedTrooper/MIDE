@@ -244,11 +244,11 @@ export default function TitleBar() {
     <>
       <div
         data-tauri-drag-region
-        className="h-10 bg-[#1e1e1e] flex items-center justify-between select-none text-[13px] text-[#cccccc] w-full border-b border-[#1e1e1e] flex-shrink-0 relative"
+        className="h-10 bg-[#1e1e1e] flex items-center select-none text-[13px] text-[#cccccc] w-full border-b border-[#1e1e1e] flex-shrink-0 relative"
       >
         {/* Left Section: Icon + Menus */}
         <div
-          className="flex items-center h-full shrink-0"
+          className="flex items-center h-full flex-shrink-0"
           data-tauri-drag-region
         >
           <div
@@ -356,10 +356,10 @@ export default function TitleBar() {
 
         {/* Center: Run Toolbar (JetBrains Style) */}
         <div
-          className="flex justify-center items-center gap-3 px-2 shrink min-w-0"
+          className="flex items-center gap-3 px-2 flex-1 min-w-0 overflow-hidden"
           data-tauri-drag-region
         >
-          <div className="flex items-center bg-[#2d2d2d] rounded border border-[#3e3e3e] h-6 px-2 gap-2 cursor-pointer hover:bg-[#363636] transition-colors relative group w-[180px] justify-between">
+          <div className="flex items-center bg-[#2d2d2d] rounded border border-[#3e3e3e] h-6 px-2 gap-2 cursor-pointer hover:bg-[#363636] transition-colors relative group w-[180px] max-w-full justify-between">
             <span className="text-xs text-gray-300 truncate flex-1 min-w-0">
               {activeConfig?.name || "Add Configuration..."}
             </span>
@@ -425,12 +425,15 @@ export default function TitleBar() {
         </div>
 
         {/* ADB Widget */}
-        <div className="flex items-center px-2" data-tauri-drag-region>
+        <div
+          className="flex items-center px-2 flex-shrink-0"
+          data-tauri-drag-region
+        >
           <AdbWidget />
         </div>
 
         {/* Right Section: Window Controls */}
-        <div className="flex items-center h-full shrink-0">
+        <div className="flex items-center h-full flex-shrink-0">
           <Button
             variant="ghost"
             size="icon"

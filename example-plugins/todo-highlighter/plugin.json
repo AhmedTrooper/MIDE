@@ -1,0 +1,32 @@
+{
+  "id": "todo-highlighter",
+  "name": "TODO Highlighter",
+  "version": "1.0.0",
+  "description": "Find and highlight TODO, FIXME, HACK, and NOTE comments in your code",
+  "author": "MIDE Team",
+  "type": "js",
+  "main": "index.js",
+  "activation_events": ["onStartup"],
+  "contributes": {
+    "commands": [
+      {
+        "id": "todo-highlighter.findAll",
+        "title": "Find All TODOs in File",
+        "category": "TODO"
+      },
+      {
+        "id": "todo-highlighter.summary",
+        "title": "Show TODO Summary",
+        "category": "TODO"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "todo-highlighter.findAll",
+        "key": "Ctrl+Shift+T"
+      }
+    ]
+  },
+  "permissions": ["fs:read", "editor:read"],
+  "enabled": true
+}

@@ -4,6 +4,7 @@ mod formatter;
 mod gh;
 mod git;
 mod models;
+mod plugins;
 mod terminal;
 mod todos;
 
@@ -35,6 +36,7 @@ use git::{
     git_stash_clear, git_stash_drop, git_stash_list, git_stash_pop, git_status_check,
     git_status_full, git_tags, git_unstage,
 };
+use plugins::{discover_plugins, get_plugin_content, load_plugin};
 use std::env;
 use terminal::{execute_shell_command, run_command};
 use todos::search_todos;
@@ -171,7 +173,11 @@ pub fn run() {
             adb_connect,
             adb_disconnect,
             emulator_list_avds,
-            emulator_start
+            emulator_start,
+            // Plugin System
+            discover_plugins,
+            load_plugin,
+            get_plugin_content
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

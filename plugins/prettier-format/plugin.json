@@ -1,0 +1,50 @@
+{
+  "id": "mide.prettier-format",
+  "name": "Prettier Code Formatter",
+  "version": "1.0.0",
+  "description": "Format code using Prettier for JavaScript, TypeScript, JSON, CSS, HTML, and more",
+  "author": "MIDE Team",
+  "type": "js",
+  "main": "index.js",
+  "activation_events": ["*"],
+  "contributes": {
+    "commands": [
+      {
+        "id": "prettier.formatDocument",
+        "title": "Format Document"
+      },
+      {
+        "id": "prettier.formatSelection",
+        "title": "Format Selection"
+      }
+    ],
+    "configuration": {
+      "tabWidth": {
+        "type": "number",
+        "default": 2,
+        "description": "Number of spaces per indentation level"
+      },
+      "useTabs": {
+        "type": "boolean",
+        "default": false,
+        "description": "Indent lines with tabs instead of spaces"
+      },
+      "semi": {
+        "type": "boolean",
+        "default": true,
+        "description": "Print semicolons at the ends of statements"
+      },
+      "singleQuote": {
+        "type": "boolean",
+        "default": false,
+        "description": "Use single quotes instead of double quotes"
+      },
+      "trailingComma": {
+        "type": "string",
+        "default": "es5",
+        "description": "Print trailing commas wherever possible"
+      }
+    }
+  },
+  "permissions": ["editor:read", "editor:write"]
+}
