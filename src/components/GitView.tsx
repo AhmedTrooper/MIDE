@@ -74,7 +74,14 @@ interface GitRemote {
   url: string;
 }
 
-type ViewMode = "changes" | "history" | "branches" | "remotes";
+type ViewMode =
+  | "changes"
+  | "history"
+  | "branches"
+  | "pullrequests"
+  | "issues"
+  | "actions"
+  | "releases";
 
 export default function GitView() {
   const { projectPath } = useEditorStore();
@@ -82,16 +89,26 @@ export default function GitView() {
   const [branches, setBranches] = useState<GitBranch[]>([]);
   const [commits, setCommits] = useState<GitCommitInfo[]>([]);
   const [remotes, setRemotes] = useState<GitRemote[]>([]);
+  const [stashes, setStashes] = useState<string[]>([]);
+  const [tags, setTags] = useState<string[]>([]);
   const [commitMessage, setCommitMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("changes");
+  const [useGitHubCLI, setUseGitHubCLI] = useState(false);
+  const [ghAuthenticated, setGhAuthenticated] = useState(false);
+  const [pullRequests, setPullRequests] = useState<any[]>([]);
+  const [issues, setIssues] = useState<any[]>([]);
+  const [workflows, setWorkflows] = useState<any[]>([]);
+  const [releases, setReleases] = useState<any[]>([]);
   const [expandedSections, setExpandedSections] = useState({
     staged: true,
     unstaged: true,
   });
   const [newBranchName, setNewBranchName] = useState("");
   const [showBranchInput, setShowBranchInput] = useState(false);
+  const [newTagName, setNewTagName] = useState("");
+  const [showTagInput, setShowTagInput] = useState(false);
   const [diffView, setDiffView] = useState<{
     file: string;
     staged: boolean;
@@ -478,6 +495,143 @@ export default function GitView() {
     else if (viewMode === "history") fetchCommits();
     else if (viewMode === "branches") fetchBranches();
     else if (viewMode === "remotes") fetchRemotes();
+    else if (viewMode === "pullrequests" && useGitHubCLI) fetchPullRequests();
+    else if (viewMode === "issues" && useGitHubCLI) fetchIssues();
+    else if (viewMode === "actions" && useGitHubCLI) fetchWorkflows();
+    else if (viewMode === "releases" && useGitHubCLI) fetchReleases();
+  }, [projectPath, viewMode, useGitHubCLI]);
+
+  useEffect(() => {
+    if (useGitHubCLI && projectPath) {
+      checkGhAuth();
+    }
+  }, [useGitHubCLI, projectPath]);
+
+  // GitHub CLI functions
+  const checkGhAuth = async () => {
+    if (!projectPath) return;
+    try {
+      const result = await invoke<string>("gh_auth_status", {
+        cwd: projectPath,
+      });
+      setGhAuthenticated(result.includes("Logged in"));
+    } catch {
+      setGhAuthenticated(false);
+    }
+  };
+
+  const handleGhLogin = async () => {
+    if (!projectPath) return;
+    try {
+      await invoke<string>("gh_auth_login", { cwd: projectPath });
+      await checkGhAuth();
+    } catch (err) {
+      setError(`GitHub login failed: ${err}`);
+    }
+  };
+
+  const fetchPullRequests = async () => {
+    if (!projectPath) return;
+    setIsLoading(true);
+    try {
+      const result = await invoke<string>("gh_pr_list", {
+        cwd: projectPath,
+        state: "open",
+      });
+      setPullRequests(JSON.parse(result));
+    } catch (err) {
+      setError(`Failed to fetch PRs: ${err}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const fetchIssues = async () => {
+    if (!projectPath) return;
+    setIsLoading(true);
+    try {
+      const result = await invoke<string>("gh_issue_list", {
+        cwd: projectPath,
+        state: "open",
+      });
+      setIssues(JSON.parse(result));
+    } catch (err) {
+      setError(`Failed to fetch issues: ${err}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const fetchWorkflows = async () => {
+    if (!projectPath) return;
+    setIsLoading(true);
+    try {
+      const result = await invoke<string>("gh_workflow_list", {
+        cwd: projectPath,
+      });
+      setWorkflows(JSON.parse(result));
+    } catch (err) {
+      setError(`Failed to fetch workflows: ${err}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const fetchReleases = async () => {
+    if (!projectPath) return;
+    setIsLoading(true);
+    try {
+      const result = await invoke<string>("gh_release_list", {
+        cwd: projectPath,
+      });
+      setReleases(JSON.parse(result));
+    } catch (err) {
+      setError(`Failed to fetch releases: ${err}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCreatePR = async () => {
+    if (!projectPath) return;
+    const title = prompt("PR Title:");
+    if (!title) return;
+    const body = prompt("PR Description:");
+    try {
+      await invoke<string>("gh_pr_create", {
+        cwd: projectPath,
+        title,
+        body: body || "",
+        base: "main",
+      });
+      await fetchPullRequests();
+    } catch (err) {
+      setError(`Failed to create PR: ${err}`);
+    }
+  };
+
+  const handleCreateIssue = async () => {
+    if (!projectPath) return;
+    const title = prompt("Issue Title:");
+    if (!title) return;
+    const body = prompt("Issue Description:");
+    try {
+      await invoke<string>("gh_issue_create", {
+        cwd: projectPath,
+        title,
+        body: body || "",
+      });
+      await fetchIssues();
+    } catch (err) {
+      setError(`Failed to create issue: ${err}`);
+    }
+  };
+
+  useEffect(() => {
+    if (viewMode === "changes") fetchStatus();
+    else if (viewMode === "history") fetchCommits();
+    else if (viewMode === "branches") fetchBranches();
+    else if (viewMode === "remotes") fetchRemotes();
   }, [projectPath, viewMode]);
 
   const getStatusIcon = (status: string) => {
@@ -511,9 +665,22 @@ export default function GitView() {
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-2 border-b border-[#333]">
         <span className="text-xs font-bold text-gray-400 uppercase">
-          Source Control
+          {useGitHubCLI ? "GitHub" : "Source Control"}
         </span>
         <div className="flex gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setUseGitHubCLI(!useGitHubCLI)}
+            className={`h-6 w-6 ${
+              useGitHubCLI
+                ? "text-white bg-[#3e3e42]"
+                : "text-gray-400 hover:text-white"
+            }`}
+            title={useGitHubCLI ? "Switch to Git" : "Switch to GitHub CLI"}
+          >
+            <GitBranch size={14} />
+          </Button>
           <Button
             variant="ghost"
             size="icon"
@@ -522,14 +689,18 @@ export default function GitView() {
               else if (viewMode === "history") fetchCommits();
               else if (viewMode === "branches") fetchBranches();
               else if (viewMode === "remotes") fetchRemotes();
+              else if (viewMode === "pullrequests") fetchPullRequests();
+              else if (viewMode === "issues") fetchIssues();
+              else if (viewMode === "actions") fetchWorkflows();
+              else if (viewMode === "releases") fetchReleases();
             }}
             className="h-6 w-6 text-gray-400 hover:text-white"
             title="Refresh"
           >
             <RefreshCw size={14} className={isLoading ? "animate-spin" : ""} />
           </Button>
-          <ContextMenu>
-            <ContextMenuTrigger asChild>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
               <Button
                 variant="ghost"
                 size="icon"
@@ -537,28 +708,28 @@ export default function GitView() {
               >
                 <MoreHorizontal size={14} />
               </Button>
-            </ContextMenuTrigger>
-            <ContextMenuContent className="bg-[#2d2d30] border-[#454545] text-white">
-              <ContextMenuItem
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="bg-[#2d2d30] border-[#454545] text-white">
+              <DropdownMenuItem
                 onClick={handlePull}
                 className="hover:bg-[#3e3e42]"
               >
                 <Download size={14} className="mr-2" /> Pull
-              </ContextMenuItem>
-              <ContextMenuItem
+              </DropdownMenuItem>
+              <DropdownMenuItem
                 onClick={handlePush}
                 className="hover:bg-[#3e3e42]"
               >
                 <Upload size={14} className="mr-2" /> Push
-              </ContextMenuItem>
-              <ContextMenuItem
+              </DropdownMenuItem>
+              <DropdownMenuItem
                 onClick={handleFetch}
                 className="hover:bg-[#3e3e42]"
               >
                 <RefreshCw size={14} className="mr-2" /> Fetch
-              </ContextMenuItem>
-            </ContextMenuContent>
-          </ContextMenu>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
@@ -587,37 +758,84 @@ export default function GitView() {
       )}
 
       {/* View Mode Tabs */}
-      <div className="flex border-b border-[#333] bg-[#252526]">
-        <button
-          onClick={() => setViewMode("changes")}
-          className={`flex-1 px-3 py-2 text-xs font-medium ${
-            viewMode === "changes"
-              ? "text-white border-b-2 border-blue-500"
-              : "text-gray-400 hover:text-white"
-          }`}
-        >
-          <GitCommit size={12} className="inline mr-1" /> Changes
-        </button>
-        <button
-          onClick={() => setViewMode("history")}
-          className={`flex-1 px-3 py-2 text-xs font-medium ${
-            viewMode === "history"
-              ? "text-white border-b-2 border-blue-500"
-              : "text-gray-400 hover:text-white"
-          }`}
-        >
-          <History size={12} className="inline mr-1" /> History
-        </button>
-        <button
-          onClick={() => setViewMode("branches")}
-          className={`flex-1 px-3 py-2 text-xs font-medium ${
-            viewMode === "branches"
-              ? "text-white border-b-2 border-blue-500"
-              : "text-gray-400 hover:text-white"
-          }`}
-        >
-          <GitBranch size={12} className="inline mr-1" /> Branches
-        </button>
+      <div className="flex border-b border-[#333] bg-[#252526] overflow-x-auto">
+        {!useGitHubCLI ? (
+          <>
+            <button
+              onClick={() => setViewMode("changes")}
+              className={`px-3 py-2 text-xs font-medium whitespace-nowrap ${
+                viewMode === "changes"
+                  ? "text-white border-b-2 border-blue-500"
+                  : "text-gray-400 hover:text-white"
+              }`}
+            >
+              <GitCommit size={12} className="inline mr-1" /> Changes
+            </button>
+            <button
+              onClick={() => setViewMode("history")}
+              className={`px-3 py-2 text-xs font-medium whitespace-nowrap ${
+                viewMode === "history"
+                  ? "text-white border-b-2 border-blue-500"
+                  : "text-gray-400 hover:text-white"
+              }`}
+            >
+              <History size={12} className="inline mr-1" /> History
+            </button>
+            <button
+              onClick={() => setViewMode("branches")}
+              className={`px-3 py-2 text-xs font-medium whitespace-nowrap ${
+                viewMode === "branches"
+                  ? "text-white border-b-2 border-blue-500"
+                  : "text-gray-400 hover:text-white"
+              }`}
+            >
+              <GitBranch size={12} className="inline mr-1" /> Branches
+            </button>
+          </>
+        ) : (
+          <>
+            <button
+              onClick={() => setViewMode("pullrequests")}
+              className={`px-3 py-2 text-xs font-medium whitespace-nowrap ${
+                viewMode === "pullrequests"
+                  ? "text-white border-b-2 border-blue-500"
+                  : "text-gray-400 hover:text-white"
+              }`}
+            >
+              <GitPullRequest size={12} className="inline mr-1" /> Pull Requests
+            </button>
+            <button
+              onClick={() => setViewMode("issues")}
+              className={`px-3 py-2 text-xs font-medium whitespace-nowrap ${
+                viewMode === "issues"
+                  ? "text-white border-b-2 border-blue-500"
+                  : "text-gray-400 hover:text-white"
+              }`}
+            >
+              <FileText size={12} className="inline mr-1" /> Issues
+            </button>
+            <button
+              onClick={() => setViewMode("actions")}
+              className={`px-3 py-2 text-xs font-medium whitespace-nowrap ${
+                viewMode === "actions"
+                  ? "text-white border-b-2 border-blue-500"
+                  : "text-gray-400 hover:text-white"
+              }`}
+            >
+              <RefreshCw size={12} className="inline mr-1" /> Actions
+            </button>
+            <button
+              onClick={() => setViewMode("releases")}
+              className={`px-3 py-2 text-xs font-medium whitespace-nowrap ${
+                viewMode === "releases"
+                  ? "text-white border-b-2 border-blue-500"
+                  : "text-gray-400 hover:text-white"
+              }`}
+            >
+              <Archive size={12} className="inline mr-1" /> Releases
+            </button>
+          </>
+        )}
       </div>
 
       {/* Error Display */}
@@ -749,10 +967,10 @@ export default function GitView() {
                   </Button>
                 </div>
                 {expandedSections.staged &&
-                  stagedFiles.map((file) => {
+                  stagedFiles.map((file, index) => {
                     const { icon, color } = getStatusIcon(file.status);
                     return (
-                      <ContextMenu key={file.path}>
+                      <ContextMenu key={file.path || `staged-${index}`}>
                         <ContextMenuTrigger asChild>
                           <div className="px-4 py-1 hover:bg-[#2a2d2e] cursor-pointer flex items-center gap-2 group">
                             <Badge
@@ -839,10 +1057,10 @@ export default function GitView() {
                   </Button>
                 </div>
                 {expandedSections.unstaged &&
-                  unstagedFiles.map((file) => {
+                  unstagedFiles.map((file, index) => {
                     const { icon, color } = getStatusIcon(file.status);
                     return (
-                      <ContextMenu key={file.path}>
+                      <ContextMenu key={file.path || `unstaged-${index}`}>
                         <ContextMenuTrigger asChild>
                           <div className="px-4 py-1 hover:bg-[#2a2d2e] cursor-pointer flex items-center gap-2 group">
                             <Badge
@@ -926,9 +1144,9 @@ export default function GitView() {
             </div>
           ) : (
             <div className="py-2">
-              {commits.map((commit) => (
+              {commits.map((commit, index) => (
                 <div
-                  key={commit.hash}
+                  key={commit.hash || `commit-${index}`}
                   className="px-4 py-3 hover:bg-[#2a2d2e] border-b border-[#333] cursor-pointer"
                 >
                   <div className="flex items-start gap-2">
@@ -1000,8 +1218,8 @@ export default function GitView() {
             )}
           </div>
           <ScrollArea className="flex-1">
-            {branches.map((branch) => (
-              <ContextMenu key={branch.name}>
+            {branches.map((branch, index) => (
+              <ContextMenu key={branch.name || `branch-${index}`}>
                 <ContextMenuTrigger asChild>
                   <div
                     className={`px-4 py-2 hover:bg-[#2a2d2e] cursor-pointer flex items-center gap-2 ${
@@ -1054,6 +1272,229 @@ export default function GitView() {
               </ContextMenu>
             ))}
           </ScrollArea>
+        </>
+      )}
+
+      {/* GitHub CLI Pull Requests View */}
+      {viewMode === "pullrequests" && useGitHubCLI && (
+        <>
+          {!ghAuthenticated ? (
+            <div className="flex flex-col items-center justify-center h-full p-4">
+              <p className="text-gray-400 text-sm mb-4">
+                Not authenticated with GitHub
+              </p>
+              <Button
+                onClick={handleGhLogin}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                Login to GitHub
+              </Button>
+            </div>
+          ) : (
+            <>
+              <div className="p-2 border-b border-[#333]">
+                <Button
+                  onClick={handleCreatePR}
+                  className="w-full text-xs bg-blue-600 hover:bg-blue-700"
+                >
+                  <Plus size={14} className="mr-2" /> Create Pull Request
+                </Button>
+              </div>
+              <ScrollArea className="flex-1">
+                {pullRequests.length === 0 ? (
+                  <div className="p-4 text-center text-gray-400 text-xs">
+                    No open pull requests
+                  </div>
+                ) : (
+                  <div className="py-2">
+                    {pullRequests.map((pr, index) => (
+                      <div
+                        key={pr.number || index}
+                        className="px-4 py-3 hover:bg-[#2a2d2e] border-b border-[#333] cursor-pointer"
+                      >
+                        <div className="flex items-start gap-2">
+                          <GitPullRequest
+                            size={14}
+                            className="text-green-400 mt-0.5"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm text-white mb-1">
+                              #{pr.number} {pr.title}
+                            </div>
+                            <div className="text-xs text-gray-400">
+                              by {pr.author?.login} •{" "}
+                              {new Date(pr.createdAt).toLocaleDateString()}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </ScrollArea>
+            </>
+          )}
+        </>
+      )}
+
+      {/* GitHub CLI Issues View */}
+      {viewMode === "issues" && useGitHubCLI && (
+        <>
+          {!ghAuthenticated ? (
+            <div className="flex flex-col items-center justify-center h-full p-4">
+              <p className="text-gray-400 text-sm mb-4">
+                Not authenticated with GitHub
+              </p>
+              <Button
+                onClick={handleGhLogin}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                Login to GitHub
+              </Button>
+            </div>
+          ) : (
+            <>
+              <div className="p-2 border-b border-[#333]">
+                <Button
+                  onClick={handleCreateIssue}
+                  className="w-full text-xs bg-blue-600 hover:bg-blue-700"
+                >
+                  <Plus size={14} className="mr-2" /> Create Issue
+                </Button>
+              </div>
+              <ScrollArea className="flex-1">
+                {issues.length === 0 ? (
+                  <div className="p-4 text-center text-gray-400 text-xs">
+                    No open issues
+                  </div>
+                ) : (
+                  <div className="py-2">
+                    {issues.map((issue, index) => (
+                      <div
+                        key={issue.number || index}
+                        className="px-4 py-3 hover:bg-[#2a2d2e] border-b border-[#333] cursor-pointer"
+                      >
+                        <div className="flex items-start gap-2">
+                          <FileText
+                            size={14}
+                            className="text-green-400 mt-0.5"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm text-white mb-1">
+                              #{issue.number} {issue.title}
+                            </div>
+                            <div className="text-xs text-gray-400">
+                              by {issue.author?.login} •{" "}
+                              {new Date(issue.createdAt).toLocaleDateString()}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </ScrollArea>
+            </>
+          )}
+        </>
+      )}
+
+      {/* GitHub CLI Actions View */}
+      {viewMode === "actions" && useGitHubCLI && (
+        <>
+          {!ghAuthenticated ? (
+            <div className="flex flex-col items-center justify-center h-full p-4">
+              <p className="text-gray-400 text-sm mb-4">
+                Not authenticated with GitHub
+              </p>
+              <Button
+                onClick={handleGhLogin}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                Login to GitHub
+              </Button>
+            </div>
+          ) : (
+            <ScrollArea className="flex-1">
+              {workflows.length === 0 ? (
+                <div className="p-4 text-center text-gray-400 text-xs">
+                  No workflows found
+                </div>
+              ) : (
+                <div className="py-2">
+                  {workflows.map((workflow, index) => (
+                    <div
+                      key={workflow.id || index}
+                      className="px-4 py-3 hover:bg-[#2a2d2e] border-b border-[#333] cursor-pointer"
+                    >
+                      <div className="flex items-start gap-2">
+                        <RefreshCw size={14} className="text-blue-400 mt-0.5" />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm text-white mb-1">
+                            {workflow.name}
+                          </div>
+                          <div className="text-xs text-gray-400">
+                            {workflow.state}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </ScrollArea>
+          )}
+        </>
+      )}
+
+      {/* GitHub CLI Releases View */}
+      {viewMode === "releases" && useGitHubCLI && (
+        <>
+          {!ghAuthenticated ? (
+            <div className="flex flex-col items-center justify-center h-full p-4">
+              <p className="text-gray-400 text-sm mb-4">
+                Not authenticated with GitHub
+              </p>
+              <Button
+                onClick={handleGhLogin}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                Login to GitHub
+              </Button>
+            </div>
+          ) : (
+            <ScrollArea className="flex-1">
+              {releases.length === 0 ? (
+                <div className="p-4 text-center text-gray-400 text-xs">
+                  No releases found
+                </div>
+              ) : (
+                <div className="py-2">
+                  {releases.map((release, index) => (
+                    <div
+                      key={release.tagName || index}
+                      className="px-4 py-3 hover:bg-[#2a2d2e] border-b border-[#333] cursor-pointer"
+                    >
+                      <div className="flex items-start gap-2">
+                        <Archive size={14} className="text-yellow-400 mt-0.5" />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm text-white mb-1">
+                            {release.name || release.tagName}
+                          </div>
+                          <div className="text-xs text-gray-400">
+                            {release.tagName} •{" "}
+                            {new Date(
+                              release.publishedAt || release.createdAt
+                            ).toLocaleDateString()}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </ScrollArea>
+          )}
         </>
       )}
 

@@ -307,3 +307,259 @@ pub fn git_clone(url: String, target: String) -> Result<(), String> {
     execute_git_command(&["clone", &url, &target], ".")?;
     Ok(())
 }
+
+// Tags
+#[tauri::command]
+pub fn git_tags(cwd: String) -> Result<Vec<String>, String> {
+    let stdout = execute_git_command(&["tag", "-l"], &cwd)?;
+    Ok(stdout.lines().map(|s| s.to_string()).collect())
+}
+
+#[tauri::command]
+pub fn git_create_tag(cwd: String, name: String, message: Option<String>) -> Result<(), String> {
+    if let Some(msg) = message {
+        execute_git_command(&["tag", "-a", &name, "-m", &msg], &cwd)?;
+    } else {
+        execute_git_command(&["tag", &name], &cwd)?;
+    }
+    Ok(())
+}
+
+#[tauri::command]
+pub fn git_delete_tag(cwd: String, name: String) -> Result<(), String> {
+    execute_git_command(&["tag", "-d", &name], &cwd)?;
+    Ok(())
+}
+
+#[tauri::command]
+pub fn git_push_tag(cwd: String, name: String) -> Result<(), String> {
+    execute_git_command(&["push", "origin", &name], &cwd)?;
+    Ok(())
+}
+
+// Reset & Revert
+#[tauri::command]
+pub fn git_reset(cwd: String, commit: String, mode: String) -> Result<String, String> {
+    let flag = match mode.as_str() {
+        "soft" => "--soft",
+        "mixed" => "--mixed",
+        "hard" => "--hard",
+        _ => "--mixed",
+    };
+    execute_git_command(&["reset", flag, &commit], &cwd)
+}
+
+#[tauri::command]
+pub fn git_revert(cwd: String, commit: String) -> Result<String, String> {
+    execute_git_command(&["revert", &commit, "--no-edit"], &cwd)
+}
+
+// Rebase
+#[tauri::command]
+pub fn git_rebase(cwd: String, branch: String) -> Result<String, String> {
+    execute_git_command(&["rebase", &branch], &cwd)
+}
+
+#[tauri::command]
+pub fn git_rebase_abort(cwd: String) -> Result<String, String> {
+    execute_git_command(&["rebase", "--abort"], &cwd)
+}
+
+#[tauri::command]
+pub fn git_rebase_continue(cwd: String) -> Result<String, String> {
+    execute_git_command(&["rebase", "--continue"], &cwd)
+}
+
+// Cherry-pick
+#[tauri::command]
+pub fn git_cherry_pick(cwd: String, commit: String) -> Result<String, String> {
+    execute_git_command(&["cherry-pick", &commit], &cwd)
+}
+
+// Blame
+#[tauri::command]
+pub fn git_blame(cwd: String, file: String) -> Result<String, String> {
+    execute_git_command(&["blame", &file], &cwd)
+}
+
+// Show commit
+#[tauri::command]
+pub fn git_show(cwd: String, commit: String) -> Result<String, String> {
+    execute_git_command(&["show", &commit], &cwd)
+}
+
+// File history
+#[tauri::command]
+pub fn git_file_history(cwd: String, file: String, limit: usize) -> Result<Vec<GitCommit>, String> {
+    let limit_str = limit.to_string();
+    let stdout = execute_git_command(
+        &[
+            "log",
+            &format!("-{}", limit_str),
+            "--pretty=format:%H%x00%an%x00%ae%x00%at%x00%s%x00%b%x00",
+            "-z",
+            "--",
+            &file,
+        ],
+        &cwd,
+    )?;
+
+    let mut commits = Vec::new();
+    for entry in stdout.split("\0\0").filter(|s| !s.is_empty()) {
+        let parts: Vec<&str> = entry.split('\0').collect();
+        if parts.len() >= 5 {
+            commits.push(GitCommit {
+                hash: parts[0].to_string(),
+                author: parts[1].to_string(),
+                email: parts[2].to_string(),
+                timestamp: parts[3].parse().unwrap_or(0),
+                message: parts[4].to_string(),
+                body: parts.get(5).unwrap_or(&"").to_string(),
+            });
+        }
+    }
+
+    Ok(commits)
+}
+
+// Compare branches
+#[tauri::command]
+pub fn git_compare_branches(cwd: String, base: String, compare: String) -> Result<String, String> {
+    execute_git_command(&["diff", &format!("{}...{}", base, compare)], &cwd)
+}
+
+// Reflog
+#[tauri::command]
+pub fn git_reflog(cwd: String, limit: usize) -> Result<Vec<String>, String> {
+    let limit_str = limit.to_string();
+    let stdout = execute_git_command(&["reflog", "-n", &limit_str], &cwd)?;
+    Ok(stdout.lines().map(|s| s.to_string()).collect())
+}
+
+// Clean
+#[tauri::command]
+pub fn git_clean(cwd: String, force: bool, directories: bool) -> Result<String, String> {
+    let mut args = vec!["clean"];
+    if force {
+        args.push("-f");
+    }
+    if directories {
+        args.push("-d");
+    }
+    execute_git_command(&args, &cwd)
+}
+
+// Conflicts
+#[tauri::command]
+pub fn git_list_conflicts(cwd: String) -> Result<Vec<GitFile>, String> {
+    let stdout = execute_git_command(&["diff", "--name-only", "--diff-filter=U"], &cwd)?;
+    let files: Vec<GitFile> = stdout
+        .lines()
+        .map(|path| GitFile {
+            status: "UU".to_string(),
+            path: path.to_string(),
+        })
+        .collect();
+    Ok(files)
+}
+
+#[tauri::command]
+pub fn git_resolve_conflict(cwd: String, file: String, strategy: String) -> Result<(), String> {
+    match strategy.as_str() {
+        "ours" => execute_git_command(&["checkout", "--ours", &file], &cwd)?,
+        "theirs" => execute_git_command(&["checkout", "--theirs", &file], &cwd)?,
+        _ => return Err("Invalid strategy".to_string()),
+    };
+    execute_git_command(&["add", &file], &cwd)?;
+    Ok(())
+}
+
+// Config
+#[tauri::command]
+pub fn git_config_get(cwd: String, key: String) -> Result<String, String> {
+    execute_git_command(&["config", "--get", &key], &cwd)
+}
+
+#[tauri::command]
+pub fn git_config_set(cwd: String, key: String, value: String) -> Result<(), String> {
+    execute_git_command(&["config", &key, &value], &cwd)?;
+    Ok(())
+}
+
+#[tauri::command]
+pub fn git_config_list(cwd: String) -> Result<Vec<String>, String> {
+    let stdout = execute_git_command(&["config", "--list"], &cwd)?;
+    Ok(stdout.lines().map(|s| s.to_string()).collect())
+}
+
+// Current branch
+#[tauri::command]
+pub fn git_current_branch(cwd: String) -> Result<String, String> {
+    let stdout = execute_git_command(&["branch", "--show-current"], &cwd)?;
+    Ok(stdout.trim().to_string())
+}
+
+// Stash operations
+#[tauri::command]
+pub fn git_stash_apply(cwd: String, index: Option<usize>) -> Result<String, String> {
+    if let Some(idx) = index {
+        execute_git_command(&["stash", "apply", &format!("stash@{{{}}}", idx)], &cwd)
+    } else {
+        execute_git_command(&["stash", "apply"], &cwd)
+    }
+}
+
+#[tauri::command]
+pub fn git_stash_drop(cwd: String, index: usize) -> Result<String, String> {
+    execute_git_command(&["stash", "drop", &format!("stash@{{{}}}", index)], &cwd)
+}
+
+#[tauri::command]
+pub fn git_stash_clear(cwd: String) -> Result<String, String> {
+    execute_git_command(&["stash", "clear"], &cwd)
+}
+
+// Search commits
+#[tauri::command]
+pub fn git_search_commits(
+    cwd: String,
+    query: String,
+    search_type: String,
+    limit: usize,
+) -> Result<Vec<GitCommit>, String> {
+    let limit_str = limit.to_string();
+    let search_arg = match search_type.as_str() {
+        "message" => format!("--grep={}", query),
+        "author" => format!("--author={}", query),
+        "committer" => format!("--committer={}", query),
+        _ => format!("--grep={}", query),
+    };
+
+    let stdout = execute_git_command(
+        &[
+            "log",
+            &search_arg,
+            &format!("-{}", limit_str),
+            "--pretty=format:%H%x00%an%x00%ae%x00%at%x00%s%x00%b%x00",
+            "-z",
+        ],
+        &cwd,
+    )?;
+
+    let mut commits = Vec::new();
+    for entry in stdout.split("\0\0").filter(|s| !s.is_empty()) {
+        let parts: Vec<&str> = entry.split('\0').collect();
+        if parts.len() >= 5 {
+            commits.push(GitCommit {
+                hash: parts[0].to_string(),
+                author: parts[1].to_string(),
+                email: parts[2].to_string(),
+                timestamp: parts[3].parse().unwrap_or(0),
+                message: parts[4].to_string(),
+                body: parts.get(5).unwrap_or(&"").to_string(),
+            });
+        }
+    }
+
+    Ok(commits)
+}

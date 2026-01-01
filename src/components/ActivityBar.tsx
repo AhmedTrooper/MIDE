@@ -1,4 +1,12 @@
-import { Files, Search, GitGraph, Box, Settings, User } from "lucide-react";
+import {
+  Files,
+  Search,
+  GitGraph,
+  Box,
+  Settings,
+  User,
+  CheckSquare,
+} from "lucide-react";
 import { Button } from "./ui/button";
 import { useEditorStore } from "../lib/store";
 
@@ -30,6 +38,7 @@ export default function ActivityBar({
     { id: "explorer", icon: Files, label: "Explorer" },
     { id: "search", icon: Search, label: "Search" },
     { id: "git", icon: GitGraph, label: "Source Control" },
+    { id: "todos", icon: CheckSquare, label: "TODO / Tasks" },
     { id: "extensions", icon: Box, label: "Extensions" },
   ];
 

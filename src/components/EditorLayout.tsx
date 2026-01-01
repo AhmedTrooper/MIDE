@@ -7,6 +7,7 @@ import ActivityBar from "./ActivityBar";
 import Sidebar from "./Sidebar";
 import SearchView from "./SearchView";
 import SettingsView from "./SettingsView";
+import TodoView from "./TodoView";
 import StatusBar from "./StatusBar";
 import RunConfigDialog from "./RunConfigDialog";
 import CommandPalette from "./CommandPalette";
@@ -43,18 +44,23 @@ export default function EditorLayout() {
       return;
     }
 
+    // Show empty file immediately with loading state
+    const name = path.split(/[/\\]/).pop() || path;
+    openFile({
+      path,
+      name,
+      content: "// Loading...",
+      language: getLanguageFromPath(path),
+      isDirty: false,
+    });
+
     try {
+      // Load content asynchronously
       const content = await invoke<string>("read_file_content", { path });
-      const name = path.split(/[/\\]/).pop() || path;
-      openFile({
-        path,
-        name,
-        content,
-        language: getLanguageFromPath(path),
-        isDirty: false,
-      });
+      updateFileContent(path, content);
     } catch (err) {
       console.error("Error reading file:", err);
+      updateFileContent(path, `// Error loading file: ${err}`);
     }
   };
 
@@ -71,6 +77,22 @@ export default function EditorLayout() {
     }
   };
 
+  const handleFormatDocument = async () => {
+    if (!activeFileObj) return;
+    try {
+      const formatted = await invoke<string>("format_code", {
+        code: activeFileObj.content,
+        language: activeFileObj.language,
+      });
+      // Update the file content with formatted code
+      const { updateFileContent } = useEditorStore.getState();
+      updateFileContent(activeFileObj.path, formatted);
+    } catch (err) {
+      console.error("Format failed:", err);
+      // Silently fail if formatter not available
+    }
+  };
+
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -78,6 +100,11 @@ export default function EditorLayout() {
       if ((e.ctrlKey || e.metaKey) && e.key === "s") {
         e.preventDefault();
         handleSave();
+      }
+      // Format Document: Shift+Alt+F
+      if (e.shiftKey && e.altKey && e.key === "F") {
+        e.preventDefault();
+        handleFormatDocument();
       }
       // Find: Ctrl+F
       if ((e.ctrlKey || e.metaKey) && e.key === "f" && !e.shiftKey) {
@@ -145,6 +172,7 @@ export default function EditorLayout() {
         )}
         {activeView === "search" && !isSidebarCollapsed && <SearchView />}
         {activeView === "git" && !isSidebarCollapsed && <GitView />}
+        {activeView === "todos" && !isSidebarCollapsed && <TodoView />}
 
         {/* Main Editor Area */}
         <div className="flex-1 flex flex-col min-w-0 bg-[#1e1e1e]">
