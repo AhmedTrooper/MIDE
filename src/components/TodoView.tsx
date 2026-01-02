@@ -11,20 +11,17 @@ import {
   FileText,
   ChevronRight,
 } from "lucide-react";
-
 interface TodoItem {
   file: string;
   line: number;
   type: "TODO" | "FIXME" | "HACK" | "NOTE" | "BUG";
   text: string;
 }
-
 export default function TodoView() {
   const { projectPath, setActiveFile, openFile } = useEditorStore();
   const [todos, setTodos] = useState<TodoItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [filter, setFilter] = useState<string | null>(null);
-
   const fetchTodos = async () => {
     if (!projectPath) return;
     setIsLoading(true);
@@ -41,20 +38,16 @@ export default function TodoView() {
       setIsLoading(false);
     }
   };
-
   useEffect(() => {
     fetchTodos();
   }, [projectPath]);
-
   const handleTodoClick = async (todo: TodoItem) => {
     try {
-      // Check if file is already open
       const content = await invoke<string>("read_file_content", {
         path: todo.file,
       });
       const name = todo.file.split(/[/\\]/).pop() || todo.file;
       const language = getLanguage(todo.file);
-
       openFile({
         path: todo.file,
         name,
@@ -62,14 +55,12 @@ export default function TodoView() {
         language,
         isDirty: false,
       });
-
       // TODO: Navigate to line number
       setActiveFile(todo.file);
     } catch (err) {
       console.error("Failed to open file:", err);
     }
   };
-
   const getLanguage = (path: string): string => {
     const ext = path.split(".").pop()?.toLowerCase();
     const langMap: Record<string, string> = {
@@ -90,7 +81,6 @@ export default function TodoView() {
     };
     return langMap[ext || ""] || "plaintext";
   };
-
   const getTypeColor = (type: string) => {
     switch (type) {
       case "TODO":
@@ -107,7 +97,6 @@ export default function TodoView() {
         return "bg-gray-500/20 text-gray-400";
     }
   };
-
   const getTypeIcon = (type: string) => {
     switch (type) {
       case "TODO":
@@ -119,14 +108,11 @@ export default function TodoView() {
         return <FileText size={14} />;
     }
   };
-
   const filteredTodos = filter ? todos.filter((t) => t.type === filter) : todos;
-
   const typeCounts = todos.reduce((acc, todo) => {
     acc[todo.type] = (acc[todo.type] || 0) + 1;
     return acc;
   }, {} as Record<string, number>);
-
   if (!projectPath) {
     return (
       <div className="flex flex-col items-center justify-center h-full p-4 text-gray-400 text-sm text-center">
@@ -135,7 +121,6 @@ export default function TodoView() {
       </div>
     );
   }
-
   return (
     <div className="flex flex-col h-full bg-[#1e1e1e] border-r border-[#333]">
       {/* Header */}
@@ -153,7 +138,6 @@ export default function TodoView() {
           <RefreshCw size={14} className={isLoading ? "animate-spin" : ""} />
         </Button>
       </div>
-
       {/* Filter Badges */}
       <div className="flex gap-2 p-2 border-b border-[#333] flex-wrap">
         <Badge
@@ -184,7 +168,6 @@ export default function TodoView() {
           );
         })}
       </div>
-
       {/* Content */}
       <ScrollArea className="flex-1">
         {isLoading ? (
@@ -239,7 +222,6 @@ export default function TodoView() {
           </div>
         )}
       </ScrollArea>
-
       {/* Stats Footer */}
       {!isLoading && filteredTodos.length > 0 && (
         <div className="px-4 py-2 border-t border-[#333] bg-[#252526]">

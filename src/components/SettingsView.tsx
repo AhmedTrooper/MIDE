@@ -9,26 +9,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from "./ui/select";
-
 export default function SettingsView() {
   const { settings, updateSettings } = useSettingsStore();
-
   const handleChange = (key: keyof typeof settings, value: any) => {
     updateSettings({ [key]: value });
   };
-
   return (
     <div className="flex flex-col h-full bg-[#1e1e1e] text-[#cccccc] w-full overflow-hidden">
       <div className="px-8 py-6 max-w-4xl mx-auto w-full overflow-y-auto scrollbar-thin scrollbar-thumb-[#424242]">
         <h1 className="text-2xl font-medium mb-6 text-white">Settings</h1>
-
         <div className="space-y-8">
           {/* Editor Section */}
           <section>
             <h2 className="text-sm font-bold uppercase tracking-wider text-blue-400 mb-4">
               Text Editor
             </h2>
-
             <div className="space-y-4">
               <div className="flex flex-col gap-2">
                 <label className="text-sm font-medium">Font Size</label>
@@ -44,7 +39,6 @@ export default function SettingsView() {
                   Controls the font size in pixels.
                 </p>
               </div>
-
               <div className="flex flex-col gap-2">
                 <label className="text-sm font-medium">Font Family</label>
                 <Input
@@ -54,7 +48,6 @@ export default function SettingsView() {
                   className="bg-[#3c3c3c] border-[#555] text-white placeholder:text-gray-500 h-8 w-full max-w-md"
                 />
               </div>
-
               <div className="flex items-center justify-between max-w-md">
                 <div className="flex flex-col gap-1">
                   <label className="text-sm font-medium">Word Wrap</label>
@@ -85,7 +78,6 @@ export default function SettingsView() {
                   </SelectContent>
                 </Select>
               </div>
-
               <div className="flex items-center gap-3">
                 <Checkbox
                   id="minimap"
@@ -104,13 +96,11 @@ export default function SettingsView() {
               </div>
             </div>
           </section>
-
           {/* Window Section */}
           <section>
             <h2 className="text-sm font-bold uppercase tracking-wider text-blue-400 mb-4">
               Window
             </h2>
-
             <div className="space-y-4">
               <div className="flex items-center justify-between max-w-md">
                 <div className="flex flex-col gap-1">

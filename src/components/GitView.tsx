@@ -49,25 +49,21 @@ import {
   SelectValue,
 } from "./ui/select";
 import GitDiffView from "./GitDiffView";
-
 interface GitFile {
   status: string;
   path: string;
 }
-
 interface GitStatus {
   branch: string;
   files: GitFile[];
   ahead: number;
   behind: number;
 }
-
 interface GitBranch {
   name: string;
   current: boolean;
   remote: string;
 }
-
 interface GitCommitInfo {
   hash: string;
   author: string;
@@ -76,12 +72,10 @@ interface GitCommitInfo {
   message: string;
   body: string;
 }
-
 interface GitRemote {
   name: string;
   url: string;
 }
-
 type ViewMode =
   | "changes"
   | "history"
@@ -91,7 +85,6 @@ type ViewMode =
   | "issues"
   | "actions"
   | "releases";
-
 export default function GitView() {
   const { projectPath } = useEditorStore();
   const [status, setStatus] = useState<GitStatus | null>(null);
@@ -133,12 +126,10 @@ export default function GitView() {
     file: string;
     staged: boolean;
   } | null>(null);
-
   const isCommandNotFoundError = (err: unknown) => {
     const msg = String(err);
     return msg.includes("Command") && msg.toLowerCase().includes("not found");
   };
-
   const invokeWithFallback = async <T,>(
     names: string[],
     args: Record<string, unknown>
@@ -154,7 +145,6 @@ export default function GitView() {
     }
     throw lastErr;
   };
-
   const checkIfGitRepo = async () => {
     if (!projectPath) return;
     try {
@@ -168,7 +158,6 @@ export default function GitView() {
       setIsGitRepo(false);
     }
   };
-
   const loadGitConfig = async () => {
     if (!projectPath) return;
     try {
@@ -190,7 +179,6 @@ export default function GitView() {
       setUserEmail("");
     }
   };
-
   const handleInitGit = async () => {
     if (!projectPath) return;
     setIsLoading(true);
@@ -208,7 +196,6 @@ export default function GitView() {
       setIsLoading(false);
     }
   };
-
   const handleSaveConfig = async () => {
     if (!projectPath) return;
     setIsLoading(true);
@@ -233,7 +220,6 @@ export default function GitView() {
       setIsLoading(false);
     }
   };
-
   const handleAddRemote = async () => {
     if (!projectPath || !newRemoteName || !newRemoteUrl) return;
     setIsLoading(true);
@@ -253,7 +239,6 @@ export default function GitView() {
       setIsLoading(false);
     }
   };
-
   const handleRemoveRemote = async (name: string) => {
     if (!projectPath || !confirm(`Remove remote '${name}'?`)) return;
     setIsLoading(true);
@@ -270,21 +255,16 @@ export default function GitView() {
       setIsLoading(false);
     }
   };
-
   const handleSyncFromRemote = async () => {
     if (!projectPath || !syncRemote || !syncBranch) return;
     setIsLoading(true);
     try {
-      // Fetch from remote
       await invokeWithFallback<string>(["git_fetch", "git::git_fetch"], {
         cwd: projectPath,
       });
-
-      // Pull the specific branch
       await invokeWithFallback<string>(["git_pull", "git::git_pull"], {
         cwd: projectPath,
       });
-
       await fetchStatus();
       await fetchBranches();
       setError(null);
@@ -294,7 +274,6 @@ export default function GitView() {
       setIsLoading(false);
     }
   };
-
   const fetchStatus = async () => {
     if (!projectPath) return;
     setIsLoading(true);
@@ -312,7 +291,6 @@ export default function GitView() {
       setIsLoading(false);
     }
   };
-
   const fetchBranches = async () => {
     if (!projectPath) return;
     try {
@@ -325,7 +303,6 @@ export default function GitView() {
       console.error("Branches error:", err);
     }
   };
-
   const fetchCommits = async () => {
     if (!projectPath) return;
     try {
@@ -338,7 +315,6 @@ export default function GitView() {
       console.error("Log error:", err);
     }
   };
-
   const fetchRemotes = async () => {
     if (!projectPath) return;
     try {
@@ -351,7 +327,6 @@ export default function GitView() {
       console.error("Remotes error:", err);
     }
   };
-
   const handleStageFile = async (file: string) => {
     if (!projectPath) return;
     try {
@@ -364,7 +339,6 @@ export default function GitView() {
       setError(`Failed to stage: ${err}`);
     }
   };
-
   const handleUnstageFile = async (file: string) => {
     if (!projectPath) return;
     try {
@@ -377,7 +351,6 @@ export default function GitView() {
       setError(`Failed to unstage: ${err}`);
     }
   };
-
   const handleDiscardFile = async (file: string) => {
     if (!projectPath || !confirm(`Discard changes to ${file}?`)) return;
     try {
@@ -390,7 +363,6 @@ export default function GitView() {
       setError(`Failed to discard: ${err}`);
     }
   };
-
   const handleStageAll = async () => {
     if (!projectPath) return;
     try {
@@ -403,7 +375,6 @@ export default function GitView() {
       setError(`Failed to stage all: ${err}`);
     }
   };
-
   const handleUnstageAll = async () => {
     if (!projectPath) return;
     try {
@@ -416,7 +387,6 @@ export default function GitView() {
       setError(`Failed to unstage all: ${err}`);
     }
   };
-
   const handleCommit = async () => {
     if (!projectPath || !commitMessage) return;
     setIsLoading(true);
@@ -435,7 +405,6 @@ export default function GitView() {
       setIsLoading(false);
     }
   };
-
   const handlePull = async () => {
     if (!projectPath) return;
     setIsLoading(true);
@@ -451,7 +420,6 @@ export default function GitView() {
       setIsLoading(false);
     }
   };
-
   const handlePush = async () => {
     if (!projectPath || !status) return;
     setIsLoading(true);
@@ -469,7 +437,6 @@ export default function GitView() {
       setIsLoading(false);
     }
   };
-
   const handleCommitAndPush = async () => {
     if (!projectPath || !commitMessage || stagedFiles.length === 0) return;
     setIsLoading(true);
@@ -479,13 +446,11 @@ export default function GitView() {
         message: commitMessage,
       });
       setCommitMessage("");
-
       await invokeWithFallback<string>(["git_push", "git::git_push"], {
         cwd: projectPath,
         setUpstream: false,
         branch: status?.branch || "main",
       });
-
       await fetchStatus();
       if (viewMode === "history") await fetchCommits();
       setError(null);
@@ -496,30 +461,23 @@ export default function GitView() {
       setIsLoading(false);
     }
   };
-
   const handleCommitAndSync = async () => {
     if (!projectPath || !commitMessage || stagedFiles.length === 0) return;
     setIsLoading(true);
     try {
-      // Pull first
       await invokeWithFallback<string>(["git_pull", "git::git_pull"], {
         cwd: projectPath,
       });
-
-      // Then commit
       await invokeWithFallback<string>(["git_commit", "git::git_commit"], {
         cwd: projectPath,
         message: commitMessage,
       });
       setCommitMessage("");
-
-      // Then push
       await invokeWithFallback<string>(["git_push", "git::git_push"], {
         cwd: projectPath,
         setUpstream: false,
         branch: status?.branch || "main",
       });
-
       await fetchStatus();
       if (viewMode === "history") await fetchCommits();
       setError(null);
@@ -530,11 +488,9 @@ export default function GitView() {
       setIsLoading(false);
     }
   };
-
   const handleAmendCommit = async () => {
     if (!projectPath || !commitMessage) return;
     if (!confirm("Amend the last commit? This will rewrite history.")) return;
-
     setIsLoading(true);
     try {
       await invokeWithFallback<string>(
@@ -555,18 +511,14 @@ export default function GitView() {
       setIsLoading(false);
     }
   };
-
   const handleStageAllAndCommit = async () => {
     if (!projectPath || !commitMessage) return;
     setIsLoading(true);
     try {
-      // Stage all changes
       await invokeWithFallback<void>(["git_add", "git::git_add"], {
         cwd: projectPath,
         files: ["."],
       });
-
-      // Then commit
       await invokeWithFallback<string>(["git_commit", "git::git_commit"], {
         cwd: projectPath,
         message: commitMessage,
@@ -582,7 +534,6 @@ export default function GitView() {
       setIsLoading(false);
     }
   };
-
   const handleCreateBranch = async () => {
     if (!projectPath || !newBranchName) return;
     try {
@@ -602,7 +553,6 @@ export default function GitView() {
       setError(`Failed to create branch: ${err}`);
     }
   };
-
   const handleCheckoutBranch = async (name: string) => {
     if (!projectPath) return;
     setIsLoading(true);
@@ -619,7 +569,6 @@ export default function GitView() {
       setIsLoading(false);
     }
   };
-
   const handleDeleteBranch = async (name: string) => {
     if (!projectPath || !confirm(`Delete branch ${name}?`)) return;
     try {
@@ -632,7 +581,6 @@ export default function GitView() {
       setError(`Failed to delete branch: ${err}`);
     }
   };
-
   const handleFetch = async () => {
     if (!projectPath) return;
     setIsLoading(true);
@@ -649,13 +597,11 @@ export default function GitView() {
       setIsLoading(false);
     }
   };
-
   useEffect(() => {
     if (projectPath) {
       checkIfGitRepo();
     }
   }, [projectPath]);
-
   useEffect(() => {
     if (isGitRepo && viewMode === "changes") fetchStatus();
     else if (isGitRepo && viewMode === "history") fetchCommits();
@@ -666,14 +612,11 @@ export default function GitView() {
     else if (viewMode === "actions" && useGitHubCLI) fetchWorkflows();
     else if (viewMode === "releases" && useGitHubCLI) fetchReleases();
   }, [projectPath, viewMode, useGitHubCLI, isGitRepo]);
-
   useEffect(() => {
     if (useGitHubCLI && projectPath) {
       checkGhAuth();
     }
   }, [useGitHubCLI, projectPath]);
-
-  // GitHub CLI functions
   const checkGhAuth = async () => {
     if (!projectPath) return;
     try {
@@ -685,7 +628,6 @@ export default function GitView() {
       setGhAuthenticated(false);
     }
   };
-
   const handleGhLogin = async () => {
     if (!projectPath) return;
     try {
@@ -695,7 +637,6 @@ export default function GitView() {
       setError(`GitHub login failed: ${err}`);
     }
   };
-
   const fetchPullRequests = async () => {
     if (!projectPath) return;
     setIsLoading(true);
@@ -711,7 +652,6 @@ export default function GitView() {
       setIsLoading(false);
     }
   };
-
   const fetchIssues = async () => {
     if (!projectPath) return;
     setIsLoading(true);
@@ -727,7 +667,6 @@ export default function GitView() {
       setIsLoading(false);
     }
   };
-
   const fetchWorkflows = async () => {
     if (!projectPath) return;
     setIsLoading(true);
@@ -742,7 +681,6 @@ export default function GitView() {
       setIsLoading(false);
     }
   };
-
   const fetchReleases = async () => {
     if (!projectPath) return;
     setIsLoading(true);
@@ -757,7 +695,6 @@ export default function GitView() {
       setIsLoading(false);
     }
   };
-
   const handleCreatePR = async () => {
     if (!projectPath) return;
     const title = prompt("PR Title:");
@@ -775,7 +712,6 @@ export default function GitView() {
       setError(`Failed to create PR: ${err}`);
     }
   };
-
   const handleCreateIssue = async () => {
     if (!projectPath) return;
     const title = prompt("Issue Title:");
@@ -792,14 +728,12 @@ export default function GitView() {
       setError(`Failed to create issue: ${err}`);
     }
   };
-
   useEffect(() => {
     if (viewMode === "changes") fetchStatus();
     else if (viewMode === "history") fetchCommits();
     else if (viewMode === "branches") fetchBranches();
     else if (viewMode === "remotes") fetchRemotes();
   }, [projectPath, viewMode]);
-
   const getStatusIcon = (status: string) => {
     if (status.includes("M")) return { icon: "M", color: "text-blue-400" };
     if (status.includes("A") || status.includes("??"))
@@ -808,7 +742,6 @@ export default function GitView() {
     if (status.includes("R")) return { icon: "R", color: "text-purple-400" };
     return { icon: status[0], color: "text-gray-400" };
   };
-
   const stagedFiles =
     status?.files.filter((f) => f.status[0] !== " " && f.status[0] !== "?") ||
     [];
@@ -816,7 +749,6 @@ export default function GitView() {
     status?.files.filter(
       (f) => f.status[1] !== " " || f.status.includes("??")
     ) || [];
-
   if (!projectPath) {
     return (
       <div className="flex flex-col items-center justify-center h-full p-4 text-gray-400 text-sm text-center">
@@ -825,7 +757,6 @@ export default function GitView() {
       </div>
     );
   }
-
   if (isGitRepo === false) {
     return (
       <div className="flex flex-col h-full bg-[#1e1e1e]">
@@ -859,7 +790,6 @@ export default function GitView() {
             Refresh
           </Button>
         </div>
-
         {/* Init Dialog */}
         {showInitDialog && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
@@ -929,7 +859,6 @@ export default function GitView() {
       </div>
     );
   }
-
   if (isGitRepo === null) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -937,7 +866,6 @@ export default function GitView() {
       </div>
     );
   }
-
   return (
     <div className="flex flex-col h-full bg-[#1e1e1e] border-r border-[#333] w-80">
       {/* Header */}
@@ -1017,7 +945,6 @@ export default function GitView() {
           </DropdownMenu>
         </div>
       </div>
-
       {/* Branch Info */}
       {status && (
         <div className="px-4 py-2 border-b border-[#333] bg-[#252526]">
@@ -1041,7 +968,6 @@ export default function GitView() {
           </div>
         </div>
       )}
-
       {/* View Mode Tabs */}
       <div className="flex border-b border-[#333] bg-[#252526] overflow-x-auto flex-shrink-0 pb-3 [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-[#424242] [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb:hover]:bg-[#4e4e4e]">
         {!useGitHubCLI ? (
@@ -1132,7 +1058,6 @@ export default function GitView() {
           </>
         )}
       </div>
-
       {/* Error Display */}
       {error && (
         <div className="mx-2 mt-2 p-2 bg-red-500/10 border border-red-500/30 rounded text-xs text-red-400">
@@ -1145,7 +1070,6 @@ export default function GitView() {
           </button>
         </div>
       )}
-
       {/* Content Area */}
       {viewMode === "changes" && (
         <div className="flex-1 flex flex-col min-h-0">
@@ -1221,7 +1145,6 @@ export default function GitView() {
               </div>
             </div>
           )}
-
           <ScrollArea className="flex-1 min-h-0">
             {/* Staged Files */}
             {stagedFiles.length > 0 && (
@@ -1312,7 +1235,6 @@ export default function GitView() {
                   })}
               </div>
             )}
-
             {/* Unstaged Files */}
             {unstagedFiles.length > 0 && (
               <div className="py-2">
@@ -1420,7 +1342,6 @@ export default function GitView() {
                   })}
               </div>
             )}
-
             {stagedFiles.length === 0 && unstagedFiles.length === 0 && (
               <div className="p-4 text-gray-500 text-xs text-center">
                 <Check size={24} className="mx-auto mb-2 text-green-500" />
@@ -1430,7 +1351,6 @@ export default function GitView() {
           </ScrollArea>
         </div>
       )}
-
       {viewMode === "history" && (
         <ScrollArea className="flex-1">
           {commits.length === 0 ? (
@@ -1465,7 +1385,6 @@ export default function GitView() {
           )}
         </ScrollArea>
       )}
-
       {viewMode === "branches" && (
         <>
           <div className="p-2 border-b border-[#333]">
@@ -1569,7 +1488,6 @@ export default function GitView() {
           </ScrollArea>
         </>
       )}
-
       {/* Remotes View */}
       {viewMode === "remotes" && (
         <>
@@ -1680,7 +1598,6 @@ export default function GitView() {
           </ScrollArea>
         </>
       )}
-
       {/* GitHub CLI Pull Requests View */}
       {viewMode === "pullrequests" && useGitHubCLI && (
         <>
@@ -1742,7 +1659,6 @@ export default function GitView() {
           )}
         </>
       )}
-
       {/* GitHub CLI Issues View */}
       {viewMode === "issues" && useGitHubCLI && (
         <>
@@ -1804,7 +1720,6 @@ export default function GitView() {
           )}
         </>
       )}
-
       {/* GitHub CLI Actions View */}
       {viewMode === "actions" && useGitHubCLI && (
         <>
@@ -1852,7 +1767,6 @@ export default function GitView() {
           )}
         </>
       )}
-
       {/* GitHub CLI Releases View */}
       {viewMode === "releases" && useGitHubCLI && (
         <>
@@ -1903,7 +1817,6 @@ export default function GitView() {
           )}
         </>
       )}
-
       {/* Diff Viewer Modal */}
       {diffView && projectPath && (
         <GitDiffView
@@ -1913,7 +1826,6 @@ export default function GitView() {
           onClose={() => setDiffView(null)}
         />
       )}
-
       {/* Config Dialog */}
       {showConfigDialog && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
@@ -1972,7 +1884,6 @@ export default function GitView() {
           </div>
         </div>
       )}
-
       {/* Add Remote Dialog */}
       {showRemoteDialog && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">

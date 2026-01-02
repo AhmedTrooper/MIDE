@@ -15,7 +15,6 @@ import { Input } from "./ui/input";
 import { motion, AnimatePresence } from "motion/react";
 import { useEditorStore } from "../lib/store";
 import { invoke } from "@tauri-apps/api/core";
-
 export default function AdbWidget() {
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<"devices" | "emulators">(
@@ -28,10 +27,8 @@ export default function AdbWidget() {
     type: "success" | "error" | "info" | null;
     message: string;
   }>({ type: null, message: "" });
-
   const { adbDevices, setAdbDevices, avdList, setAvdList } = useEditorStore();
   const widgetRef = useRef<HTMLDivElement>(null);
-
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -41,22 +38,17 @@ export default function AdbWidget() {
         setIsOpen(false);
       }
     };
-
     if (isOpen) {
       document.addEventListener("mousedown", handleClickOutside);
     }
-
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [isOpen]);
-
-  // Fetch connected devices on mount
   useEffect(() => {
     fetchDevices();
     fetchAvds();
   }, []);
-
   const fetchAvds = async () => {
     try {
       const result = await invoke<string>("emulator_list_avds");
@@ -66,7 +58,6 @@ export default function AdbWidget() {
       console.error("Failed to get AVD list:", err);
     }
   };
-
   const fetchDevices = async () => {
     try {
       const result = await invoke<string>("adb_devices");
@@ -76,11 +67,9 @@ export default function AdbWidget() {
       console.error("Failed to get ADB devices:", err);
     }
   };
-
   const parseAdbDevices = (output: string): string[] => {
     const lines = output.split("\n").filter((line) => line.trim());
     const devices: string[] = [];
-
     lines.forEach((line) => {
       if (line.includes("\tdevice") || line.includes("  device")) {
         const deviceId = line.split(/\s+/)[0];
@@ -89,10 +78,8 @@ export default function AdbWidget() {
         }
       }
     });
-
     return devices;
   };
-
   const handleConnect = async () => {
     if (!host || !port) {
       setConnectionStatus({
@@ -101,14 +88,11 @@ export default function AdbWidget() {
       });
       return;
     }
-
     setIsConnecting(true);
     setConnectionStatus({ type: "info", message: "Connecting..." });
-
     try {
       const address = `${host}:${port}`;
       const result = await invoke<string>("adb_connect", { address });
-
       if (
         result.toLowerCase().includes("connected") ||
         result.toLowerCase().includes("already connected")
@@ -141,7 +125,6 @@ export default function AdbWidget() {
       setIsConnecting(false);
     }
   };
-
   const handleDisconnect = async (device: string) => {
     try {
       await invoke<string>("adb_disconnect", { device });
@@ -157,7 +140,6 @@ export default function AdbWidget() {
       });
     }
   };
-
   const handleStartEmulator = async (avdName: string) => {
     setConnectionStatus({ type: "info", message: `Starting ${avdName}...` });
     try {
@@ -166,7 +148,6 @@ export default function AdbWidget() {
         type: "success",
         message: result,
       });
-      // Refresh devices after a delay
       setTimeout(() => {
         fetchDevices();
       }, 5000);
@@ -177,14 +158,12 @@ export default function AdbWidget() {
       });
     }
   };
-
   const getStatusIcon = () => {
     if (adbDevices.length > 0) {
       return <Wifi size={14} className="text-green-400" />;
     }
     return <WifiOff size={14} className="text-gray-400" />;
   };
-
   return (
     <div className="relative" ref={widgetRef}>
       <Button
@@ -202,7 +181,6 @@ export default function AdbWidget() {
           </span>
         )}
       </Button>
-
       <AnimatePresence>
         {isOpen && (
           <motion.div
@@ -243,7 +221,6 @@ export default function AdbWidget() {
                 </div>
               </Button>
             </div>
-
             {activeTab === "devices" && (
               <>
                 <div className="p-3 border-b border-[#333]">
@@ -260,7 +237,6 @@ export default function AdbWidget() {
                       <X size={12} />
                     </Button>
                   </div>
-
                   <div className="space-y-2">
                     <div>
                       <label className="text-xs text-gray-400 mb-1 block">
@@ -274,7 +250,6 @@ export default function AdbWidget() {
                         className="bg-[#3c3c3c] border-[#3c3c3c] focus:border-[#007fd4] text-white text-sm h-8"
                       />
                     </div>
-
                     <div>
                       <label className="text-xs text-gray-400 mb-1 block">
                         Port
@@ -287,7 +262,6 @@ export default function AdbWidget() {
                         className="bg-[#3c3c3c] border-[#3c3c3c] focus:border-[#007fd4] text-white text-sm h-8"
                       />
                     </div>
-
                     <Button
                       onClick={handleConnect}
                       disabled={isConnecting}
@@ -306,7 +280,6 @@ export default function AdbWidget() {
                       )}
                     </Button>
                   </div>
-
                   {connectionStatus.type && (
                     <div
                       className={`mt-3 p-2 rounded text-xs flex items-start gap-2 ${
@@ -335,7 +308,6 @@ export default function AdbWidget() {
                     </div>
                   )}
                 </div>
-
                 {/* Connected Devices */}
                 <div className="p-3">
                   <div className="flex items-center justify-between mb-2">
@@ -352,7 +324,6 @@ export default function AdbWidget() {
                       <Loader2 size={12} />
                     </Button>
                   </div>
-
                   {adbDevices.length === 0 ? (
                     <div className="text-xs text-gray-500 text-center py-3">
                       No devices connected
@@ -386,7 +357,6 @@ export default function AdbWidget() {
                 </div>
               </>
             )}
-
             {activeTab === "emulators" && (
               <div className="p-3">
                 <div className="flex items-center justify-between mb-3">
@@ -403,7 +373,6 @@ export default function AdbWidget() {
                     <Loader2 size={12} />
                   </Button>
                 </div>
-
                 {connectionStatus.type && (
                   <div
                     className={`mb-3 p-2 rounded text-xs flex items-start gap-2 ${
@@ -431,7 +400,6 @@ export default function AdbWidget() {
                     </span>
                   </div>
                 )}
-
                 {avdList.length === 0 ? (
                   <div className="text-xs text-gray-500 text-center py-3">
                     No emulators found

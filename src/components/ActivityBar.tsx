@@ -10,25 +10,20 @@ import {
 } from "lucide-react";
 import { Button } from "./ui/button";
 import { useEditorStore } from "../lib/store";
-
 interface ActivityBarProps {
   activeView: string;
   onViewChange: (view: string) => void;
 }
-
 export default function ActivityBar({
   activeView,
   onViewChange,
 }: ActivityBarProps) {
   const { isSidebarCollapsed, toggleSidebar, setSidebarCollapsed } =
     useEditorStore();
-
   const handleViewClick = (viewId: string) => {
-    // If clicking the same active view, toggle sidebar
     if (activeView === viewId && !isSidebarCollapsed) {
       toggleSidebar();
     } else {
-      // If switching views or expanding collapsed sidebar
       if (isSidebarCollapsed) {
         setSidebarCollapsed(false);
       }
@@ -43,12 +38,10 @@ export default function ActivityBar({
     { id: "terminal", icon: TerminalIcon, label: "Terminal" },
     { id: "extensions", icon: Box, label: "Extensions" },
   ];
-
   const bottomItems = [
     { id: "account", icon: User, label: "Accounts" },
     { id: "settings", icon: Settings, label: "Settings" },
   ];
-
   return (
     <div className="w-12 flex flex-col bg-[#333333] text-[#858585] py-2 select-none z-20 h-full overflow-hidden">
       <div className="flex-1 flex flex-col gap-2 items-center overflow-y-auto no-scrollbar w-full min-h-0">
@@ -71,7 +64,6 @@ export default function ActivityBar({
           </Button>
         ))}
       </div>
-
       <div className="flex flex-col gap-2 items-center mt-auto pt-2 bg-[#333333] shrink-0">
         {bottomItems.map((item) => (
           <Button

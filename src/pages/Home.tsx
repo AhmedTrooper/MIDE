@@ -1,7 +1,6 @@
 import { useEditorStore } from "../lib/store";
 import { Button } from "../components/ui/button";
 import { FolderOpen, Clock, X, Code2 } from "lucide-react";
-
 export const Home = () => {
   const {
     recentProjects,
@@ -9,7 +8,6 @@ export const Home = () => {
     openProjectDialog,
     removeRecentProject,
   } = useEditorStore();
-
   return (
     <div className="h-full flex flex-col items-center justify-center bg-[#1e1e1e] text-white p-8 overflow-auto">
       <div className="max-w-4xl w-full space-y-12">
@@ -26,7 +24,6 @@ export const Home = () => {
             The Professional IDE for Modern Development
           </p>
         </div>
-
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
           <div className="space-y-6">
             <h2 className="text-2xl font-semibold flex items-center gap-3 text-blue-400">
@@ -43,7 +40,6 @@ export const Home = () => {
               </Button>
             </div>
           </div>
-
           <div className="space-y-6">
             <h2 className="text-2xl font-semibold flex items-center gap-3 text-purple-400">
               <Clock className="w-6 h-6" /> Recent Projects

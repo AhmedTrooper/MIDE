@@ -15,8 +15,8 @@ import CommandPalette from "./CommandPalette";
 import GitView from "./GitView";
 import SplitEditorLayout from "./SplitEditorLayout";
 import PluginManagerView from "./PluginManagerView";
+import ResizablePanel from "./ResizablePanel";
 import { Button } from "./ui/button";
-
 export default function EditorLayout() {
   const {
     fileTree,
@@ -34,18 +34,13 @@ export default function EditorLayout() {
     splitDirection,
     updateFileContent,
   } = useEditorStore();
-
   const activeFileObj = openFiles.find((f) => f.path === activeFile);
-
   const handleFileSelect = async (path: string) => {
-    // Check if already open
     const existing = openFiles.find((f) => f.path === path);
     if (existing) {
       setActiveFile(path);
       return;
     }
-
-    // Show empty file immediately with loading state
     const name = path.split(/[/\\]/).pop() || path;
     openFile({
       path,
@@ -54,17 +49,14 @@ export default function EditorLayout() {
       language: getLanguageFromPath(path),
       isDirty: false,
     });
-
     try {
-      // Load content asynchronously
       const content = await invoke<string>("read_file_content", { path });
-      updateFileContent(path, content, false); // false = don't mark as dirty when loading from disk
+      updateFileContent(path, content, false);
     } catch (err) {
       console.error("Error reading file:", err);
       updateFileContent(path, `// Error loading file: ${err}`, false);
     }
   };
-
   const handleSave = async () => {
     if (!activeFileObj) return;
     try {
@@ -77,7 +69,6 @@ export default function EditorLayout() {
       console.error("Failed to save:", err);
     }
   };
-
   const handleFormatDocument = async () => {
     if (!activeFileObj) return;
     try {
@@ -85,61 +76,29 @@ export default function EditorLayout() {
         code: activeFileObj.content,
         language: activeFileObj.language,
       });
-      // Update the file content with formatted code
       updateFileContent(activeFileObj.path, formatted);
     } catch (err) {
       console.error("Format failed:", err);
-      // Silently fail if formatter not available
     }
   };
-
-  // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Save: Ctrl+S
       if ((e.ctrlKey || e.metaKey) && e.key === "s") {
         e.preventDefault();
         handleSave();
       }
-      // Format Document: Shift+Alt+F
       if (e.shiftKey && e.altKey && e.key === "F") {
         e.preventDefault();
         handleFormatDocument();
       }
-      // Find: Ctrl+F
-      if ((e.ctrlKey || e.metaKey) && e.key === "f" && !e.shiftKey) {
-        e.preventDefault();
-        const { setFindWidgetOpen, setFindReplaceMode } =
-          useEditorStore.getState();
-        setFindReplaceMode(false);
-        setFindWidgetOpen(true);
-      }
-      // Find & Replace: Ctrl+H
-      if ((e.ctrlKey || e.metaKey) && e.key === "h") {
-        e.preventDefault();
-        const { setFindWidgetOpen, setFindReplaceMode } =
-          useEditorStore.getState();
-        setFindReplaceMode(true);
-        setFindWidgetOpen(true);
-      }
-      // Toggle Sidebar: Ctrl+B
       if ((e.ctrlKey || e.metaKey) && e.key === "b") {
         e.preventDefault();
-        const { toggleSidebar } = useEditorStore.getState();
         toggleSidebar();
       }
-      // Split Vertical: Ctrl+\
       if ((e.ctrlKey || e.metaKey) && e.key === "\\") {
         e.preventDefault();
         if (splitDirection === "none") {
           splitEditorVertical();
-        }
-      }
-      // Split Horizontal: Ctrl+Shift+\
-      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === "|") {
-        e.preventDefault();
-        if (splitDirection === "none") {
-          splitEditorHorizontal();
         }
       }
     };
@@ -147,38 +106,40 @@ export default function EditorLayout() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [
     activeFileObj,
+    handleSave,
+    handleFormatDocument,
+    toggleSidebar,
     splitDirection,
-    splitEditorHorizontal,
     splitEditorVertical,
   ]);
-
   return (
     <div className="flex flex-col h-full w-full bg-[#1e1e1e] text-white overflow-hidden">
       <CommandPalette />
       <RunConfigDialog />
-
       <div className="flex-1 flex min-h-0">
-        {/* Activity Bar */}
         <ActivityBar activeView={activeView} onViewChange={setActiveView} />
-
-        {/* Sidebar Area */}
-        {activeView === "explorer" && !isSidebarCollapsed && (
-          <Sidebar
-            title="EXPLORER"
-            fileTree={fileTree}
-            onFileSelect={handleFileSelect}
-            isVisible={true}
-          />
+        {!isSidebarCollapsed && (
+          <ResizablePanel
+            direction="horizontal"
+            defaultSize={300}
+            minSize={200}
+            maxSize={600}
+          >
+            {activeView === "explorer" && (
+              <Sidebar
+                title="EXPLORER"
+                fileTree={fileTree}
+                onFileSelect={handleFileSelect}
+                isVisible={true}
+              />
+            )}
+            {activeView === "search" && <SearchView />}
+            {activeView === "git" && <GitView />}
+            {activeView === "todos" && <TodoView />}
+            {activeView === "terminal" && <TerminalView />}
+            {activeView === "extensions" && <PluginManagerView />}
+          </ResizablePanel>
         )}
-        {activeView === "search" && !isSidebarCollapsed && <SearchView />}
-        {activeView === "git" && !isSidebarCollapsed && <GitView />}
-        {activeView === "todos" && !isSidebarCollapsed && <TodoView />}
-        {activeView === "terminal" && !isSidebarCollapsed && <TerminalView />}
-        {activeView === "extensions" && !isSidebarCollapsed && (
-          <PluginManagerView />
-        )}
-
-        {/* Main Editor Area */}
         <div className="flex-1 flex flex-col min-w-0 bg-[#1e1e1e]">
           {activeView === "settings" ? (
             <SettingsView />
@@ -186,7 +147,6 @@ export default function EditorLayout() {
             <div className="h-full" />
           ) : (
             <>
-              {/* Split Editor Controls Bar */}
               {splitDirection === "none" && openFiles.length > 0 && (
                 <div className="h-9 bg-[#252526] border-b border-[#1e1e1e] flex items-center justify-end px-2 gap-1">
                   <Button
@@ -209,15 +169,11 @@ export default function EditorLayout() {
                   </Button>
                 </div>
               )}
-
-              {/* Split Editor */}
               <SplitEditorLayout />
             </>
           )}
         </div>
       </div>
-
-      {/* Status Bar */}
       <StatusBar language={activeFileObj?.language || "Plain Text"} />
     </div>
   );

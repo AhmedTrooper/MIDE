@@ -12,7 +12,6 @@ import {
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { motion, AnimatePresence } from "motion/react";
-
 interface FindReplaceWidgetProps {
   isOpen: boolean;
   isReplaceMode: boolean;
@@ -24,13 +23,11 @@ interface FindReplaceWidgetProps {
   onReplaceAll: (replacement: string) => void;
   matchCount?: { current: number; total: number };
 }
-
 export interface FindOptions {
   caseSensitive: boolean;
   wholeWord: boolean;
   regex: boolean;
 }
-
 export default function FindReplaceWidget({
   isOpen,
   isReplaceMode,
@@ -49,21 +46,17 @@ export default function FindReplaceWidget({
     wholeWord: false,
     regex: false,
   });
-
   const findInputRef = useRef<HTMLInputElement>(null);
-
   useEffect(() => {
     if (isOpen) {
       setTimeout(() => findInputRef.current?.focus(), 50);
     }
   }, [isOpen]);
-
   useEffect(() => {
     if (findValue) {
       onFind(findValue, options);
     }
   }, [findValue, options]);
-
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Escape") {
       onClose();
@@ -75,9 +68,7 @@ export default function FindReplaceWidget({
       }
     }
   };
-
   if (!isOpen) return null;
-
   return (
     <AnimatePresence>
       <motion.div
@@ -106,7 +97,6 @@ export default function FindReplaceWidget({
               </span>
             )}
           </div>
-
           {/* Find Options */}
           <Button
             variant="ghost"
@@ -151,7 +141,6 @@ export default function FindReplaceWidget({
           >
             <Regex size={14} />
           </Button>
-
           {/* Navigation */}
           <div className="w-px h-5 bg-[#454545] mx-1" />
           <Button
@@ -172,7 +161,6 @@ export default function FindReplaceWidget({
           >
             <ChevronDown size={14} />
           </Button>
-
           {/* Close */}
           <Button
             variant="ghost"
@@ -184,7 +172,6 @@ export default function FindReplaceWidget({
             <X size={14} />
           </Button>
         </div>
-
         {/* Replace Row */}
         {isReplaceMode && (
           <div className="flex items-center gap-1 p-2">
@@ -198,7 +185,6 @@ export default function FindReplaceWidget({
                 className="flex-1 bg-transparent border-0 shadow-none px-2 py-1 text-sm text-white placeholder:text-gray-500 h-7 focus-visible:ring-0"
               />
             </div>
-
             <Button
               variant="ghost"
               size="icon"
@@ -219,7 +205,6 @@ export default function FindReplaceWidget({
             >
               <ReplaceAll size={14} />
             </Button>
-
             {/* Spacer to align with find row */}
             <div style={{ width: "140px" }} />
           </div>

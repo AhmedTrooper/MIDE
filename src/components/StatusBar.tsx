@@ -1,11 +1,9 @@
 import { GitBranch, RefreshCw, AlertCircle, Check, Bell } from "lucide-react";
 import { Button } from "./ui/button";
-
 interface StatusBarProps {
   language: string;
   cursorPosition?: { line: number; col: number };
 }
-
 export default function StatusBar({
   language,
   cursorPosition = { line: 1, col: 1 },
@@ -40,7 +38,6 @@ export default function StatusBar({
           <span>0</span>
         </Button>
       </div>
-
       <div className="flex items-center gap-4">
         <Button
           variant="ghost"

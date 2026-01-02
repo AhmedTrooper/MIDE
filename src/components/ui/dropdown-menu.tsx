@@ -1,33 +1,27 @@
 import * as React from "react";
 import { cn } from "../../lib/utils";
-
 interface DropdownMenuProps {
   children: React.ReactNode;
 }
-
 interface DropdownMenuTriggerProps {
   children: React.ReactNode;
   asChild?: boolean;
   disabled?: boolean;
 }
-
 interface DropdownMenuContentProps {
   children: React.ReactNode;
   className?: string;
   align?: "start" | "center" | "end";
 }
-
 interface DropdownMenuItemProps {
   children: React.ReactNode;
   onClick?: () => void;
   disabled?: boolean;
   className?: string;
 }
-
 interface DropdownMenuSeparatorProps {
   className?: string;
 }
-
 const DropdownMenuContext = React.createContext<{
   isOpen: boolean;
   setIsOpen: (open: boolean) => void;
@@ -35,37 +29,31 @@ const DropdownMenuContext = React.createContext<{
   isOpen: false,
   setIsOpen: () => {},
 });
-
 export const DropdownMenu: React.FC<DropdownMenuProps> = ({ children }) => {
   const [isOpen, setIsOpen] = React.useState(false);
-
   return (
     <DropdownMenuContext.Provider value={{ isOpen, setIsOpen }}>
       <div className="relative inline-block">{children}</div>
     </DropdownMenuContext.Provider>
   );
 };
-
 export const DropdownMenuTrigger = React.forwardRef<
   HTMLButtonElement,
   DropdownMenuTriggerProps
 >(({ children, asChild, disabled }, ref) => {
   const { isOpen, setIsOpen } = React.useContext(DropdownMenuContext);
-
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!disabled) {
       setIsOpen(!isOpen);
     }
   };
-
   if (asChild && React.isValidElement(children)) {
     return React.cloneElement(children as React.ReactElement<any>, {
       onClick: handleClick,
       ref,
     });
   }
-
   return (
     <button ref={ref} onClick={handleClick} disabled={disabled}>
       {children}
@@ -73,14 +61,12 @@ export const DropdownMenuTrigger = React.forwardRef<
   );
 });
 DropdownMenuTrigger.displayName = "DropdownMenuTrigger";
-
 export const DropdownMenuContent = React.forwardRef<
   HTMLDivElement,
   DropdownMenuContentProps
 >(({ children, className, align = "start" }, ref) => {
   const { isOpen, setIsOpen } = React.useContext(DropdownMenuContext);
   const contentRef = React.useRef<HTMLDivElement>(null);
-
   React.useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -90,7 +76,6 @@ export const DropdownMenuContent = React.forwardRef<
         setIsOpen(false);
       }
     };
-
     if (isOpen) {
       document.addEventListener("mousedown", handleClickOutside);
       return () => {
@@ -98,15 +83,12 @@ export const DropdownMenuContent = React.forwardRef<
       };
     }
   }, [isOpen, setIsOpen]);
-
   if (!isOpen) return null;
-
   const alignmentClass = {
     start: "left-0",
     center: "left-1/2 -translate-x-1/2",
     end: "right-0",
   }[align];
-
   return (
     <div
       ref={(node) => {
@@ -125,20 +107,17 @@ export const DropdownMenuContent = React.forwardRef<
   );
 });
 DropdownMenuContent.displayName = "DropdownMenuContent";
-
 export const DropdownMenuItem = React.forwardRef<
   HTMLDivElement,
   DropdownMenuItemProps
 >(({ children, onClick, disabled, className }, ref) => {
   const { setIsOpen } = React.useContext(DropdownMenuContext);
-
   const handleClick = () => {
     if (!disabled && onClick) {
       onClick();
       setIsOpen(false);
     }
   };
-
   return (
     <div
       ref={ref}
@@ -156,7 +135,6 @@ export const DropdownMenuItem = React.forwardRef<
   );
 });
 DropdownMenuItem.displayName = "DropdownMenuItem";
-
 export const DropdownMenuSeparator = React.forwardRef<
   HTMLDivElement,
   DropdownMenuSeparatorProps

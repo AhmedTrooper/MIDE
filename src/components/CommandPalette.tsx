@@ -13,7 +13,6 @@ import {
   FolderPlus,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
-
 interface Command {
   id: string;
   label: string;
@@ -21,7 +20,6 @@ interface Command {
   icon: React.ReactNode;
   action: () => void;
 }
-
 export default function CommandPalette() {
   const {
     isCommandPaletteOpen,
@@ -38,33 +36,19 @@ export default function CommandPalette() {
     toggleSidebar,
     isSidebarCollapsed,
   } = useEditorStore();
-
   const [query, setQuery] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [fileResults, setFileResults] = useState<
     { path: string; score: number }[]
   >([]);
   const inputRef = useRef<HTMLInputElement>(null);
-
   useEffect(() => {
     const searchFiles = async () => {
       if (!projectPath || !query || query.startsWith(">")) {
         setFileResults([]);
         return;
       }
-
       try {
-        // Use invoke to call the Rust backend
-        // We need to import invoke if it's not already imported, but it's not in the original file imports
-        // Let's assume we can add it or use window.__TAURI__.invoke if available,
-        // but better to use the standard import.
-        // Since I cannot see the imports in this replace block, I will assume I need to add it.
-        // Wait, I can't add imports easily here.
-        // I will use a dynamic import or assume it's available via a helper if I could.
-        // Actually, I should check if invoke is imported. It is NOT imported in the original file.
-        // I will add the import in a separate step.
-
-        // For now, let's just set the state logic
         const { invoke } = await import("@tauri-apps/api/core");
         const results = await invoke<{ path: string; score: number }[]>(
           "fuzzy_search_files",
@@ -78,14 +62,11 @@ export default function CommandPalette() {
         console.error("Fuzzy search failed:", err);
       }
     };
-
     const debounce = setTimeout(searchFiles, 150);
     return () => clearTimeout(debounce);
   }, [query, projectPath]);
-
   const handleCreateTrigger = (type: "file" | "folder") => {
     if (!projectPath) return;
-
     let parentPath = projectPath;
     if (selectedNode) {
       if (selectedNode.isDir) {
@@ -98,10 +79,8 @@ export default function CommandPalette() {
         }
       }
     }
-
     setCreationState({ type, parentPath });
   };
-
   const commands: Command[] = [
     {
       id: "toggle-terminal",
@@ -166,7 +145,6 @@ export default function CommandPalette() {
       shortcut: "Ctrl+,",
       icon: <Settings size={16} />,
       action: () => {
-        // Open settings
       },
     },
     ...openFiles.map((file) => ({
@@ -176,10 +154,7 @@ export default function CommandPalette() {
       action: () => setActiveFile(file.path),
     })),
   ];
-
-  // Combine commands and file results
   const isCommandMode = query.startsWith(">");
-
   const filteredCommands = isCommandMode
     ? commands.filter((cmd) =>
         cmd.label
@@ -189,7 +164,6 @@ export default function CommandPalette() {
     : commands.filter((cmd) =>
         cmd.label.toLowerCase().includes(query.toLowerCase())
       );
-
   const displayItems = isCommandMode
     ? filteredCommands
     : [
@@ -202,7 +176,6 @@ export default function CommandPalette() {
           action: () => setActiveFile(file.path),
         })),
       ];
-
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === "P") {
@@ -213,11 +186,9 @@ export default function CommandPalette() {
         setCommandPaletteOpen(false);
       }
     };
-
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [setCommandPaletteOpen]);
-
   useEffect(() => {
     if (isCommandPaletteOpen) {
       setQuery("");
@@ -225,11 +196,9 @@ export default function CommandPalette() {
       setTimeout(() => inputRef.current?.focus(), 50);
     }
   }, [isCommandPaletteOpen]);
-
   useEffect(() => {
     const handleNavigation = (e: KeyboardEvent) => {
       if (!isCommandPaletteOpen) return;
-
       if (e.key === "ArrowDown") {
         e.preventDefault();
         setSelectedIndex((prev) =>
@@ -246,7 +215,6 @@ export default function CommandPalette() {
         }
       }
     };
-
     window.addEventListener("keydown", handleNavigation);
     return () => window.removeEventListener("keydown", handleNavigation);
   }, [
@@ -255,9 +223,7 @@ export default function CommandPalette() {
     selectedIndex,
     setCommandPaletteOpen,
   ]);
-
   if (!isCommandPaletteOpen) return null;
-
   return (
     <AnimatePresence>
       <div
@@ -290,7 +256,6 @@ export default function CommandPalette() {
               </span>
             </div>
           </div>
-
           <div className="max-h-[400px] overflow-y-auto py-1 custom-scrollbar">
             {displayItems.length === 0 ? (
               <div className="px-4 py-8 text-center text-gray-500 text-sm">

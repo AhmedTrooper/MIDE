@@ -3,7 +3,6 @@ import { invoke } from "@tauri-apps/api/core";
 import { open, confirm } from "@tauri-apps/plugin-dialog";
 import { type FileNode } from '../components/ui/FileTree';
 import { pluginEvents } from './pluginStore';
-
 export interface OpenFile {
     path: string;
     name: string;
@@ -11,13 +10,11 @@ export interface OpenFile {
     language: string;
     isDirty: boolean;
 }
-
 export interface SearchResult {
     file: string;
     line: number;
     content: string;
 }
-
 export interface RunConfiguration {
     id: string;
     name: string;
@@ -25,12 +22,10 @@ export interface RunConfiguration {
     args?: string[];
     cwd?: string;
 }
-
 export interface EditorGroup {
     id: string;
     activeFile: string | null;
 }
-
 export interface TerminalInstance {
     id: string;
     name: string;
@@ -41,16 +36,12 @@ export interface TerminalInstance {
     venvPath?: string;
     isRunning: boolean;
 }
-
 export type SplitDirection = 'none' | 'horizontal' | 'vertical';
-
 interface EditorState {
     fileTree: FileNode | null;
     openFiles: OpenFile[];
     activeFile: string | null;
     activeView: string; // 'explorer', 'search', etc.
-
-    // Split Editor State
     splitDirection: SplitDirection;
     editorGroups: EditorGroup[];
     activeGroupId: string;
@@ -65,13 +56,9 @@ interface EditorState {
     searchQuery: string;
     selectedNode: { path: string; isDir: boolean } | null;
     creationState: { type: 'file' | 'folder'; parentPath: string } | null;
-
-    // Run Configuration State
     runConfigurations: RunConfiguration[];
     activeRunConfigId: string | null;
     isRunConfigDialogOpen: boolean;
-
-    // Terminal State
     terminals: TerminalInstance[];
     activeTerminalId: string | null;
     addTerminal: (cwd?: string, name?: string) => void;
@@ -83,18 +70,13 @@ interface EditorState {
     updateTerminalCwd: (id: string, cwd: string) => void;
     activateVenvInTerminal: (id: string, venvPath: string) => void;
     setTerminalRunning: (id: string, isRunning: boolean) => void;
-
-    // ADB State
     adbDevices: string[];
     setAdbDevices: (devices: string[]) => void;
     avdList: string[];
     setAvdList: (avds: string[]) => void;
-
-    // Recent Projects
     recentProjects: string[];
     addRecentProject: (path: string) => void;
     removeRecentProject: (path: string) => void;
-
     setFileTree: (tree: FileNode) => void;
     setProjectPath: (path: string) => void;
     setActiveView: (view: string) => void;
@@ -116,31 +98,23 @@ interface EditorState {
     setSearchQuery: (query: string) => void;
     setSelectedNode: (node: { path: string; isDir: boolean } | null) => void;
     setCreationState: (state: { type: 'file' | 'folder'; parentPath: string } | null) => void;
-
-    // Run Configuration Actions
     setRunConfigurations: (configs: RunConfiguration[]) => void;
     setActiveRunConfigId: (id: string | null) => void;
     setRunConfigDialogOpen: (isOpen: boolean) => void;
     addRunConfiguration: (config: RunConfiguration) => void;
-
-    // Split Editor Actions
     splitEditorHorizontal: () => void;
     splitEditorVertical: () => void;
     closeSplit: () => void;
     setActiveGroup: (groupId: string) => void;
     setGroupActiveFile: (groupId: string, filePath: string | null) => void;
 }
-
 export const useEditorStore = create<EditorState>((set, get) => ({
     fileTree: null,
     openFiles: [],
     activeFile: null,
     activeView: 'explorer',
     projectPath: null,
-
     recentProjects: JSON.parse(localStorage.getItem('recentProjects') || '[]'),
-
-    // Split Editor Initial State
     splitDirection: 'none',
     editorGroups: [{ id: 'group-1', activeFile: null }],
     activeGroupId: 'group-1',
@@ -153,21 +127,17 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     searchQuery: "",
     selectedNode: null,
     creationState: null,
-
     runConfigurations: [
         { id: 'default', name: 'Echo Hello', command: 'echo', args: ['Hello', 'World'] }
     ],
     activeRunConfigId: 'default',
     isRunConfigDialogOpen: false,
-
     terminals: [],
     activeTerminalId: null,
-
     addTerminal: (cwd?: string, name?: string) => set((state) => {
         const id = `terminal-${Date.now()}`;
         const terminalName = name || `Terminal ${state.terminals.length + 1}`;
         const workingDir = cwd || state.projectPath || '~';
-
         const newTerminal: TerminalInstance = {
             id,
             name: terminalName,
@@ -177,21 +147,17 @@ export const useEditorStore = create<EditorState>((set, get) => ({
             venvActivated: false,
             isRunning: false,
         };
-
         return {
             terminals: [...state.terminals.map(t => ({ ...t, isActive: false })), newTerminal],
             activeTerminalId: id,
         };
     }),
-
     removeTerminal: (id) => set((state) => {
         const newTerminals = state.terminals.filter(t => t.id !== id);
         let newActiveId = state.activeTerminalId;
-
         if (state.activeTerminalId === id) {
             newActiveId = newTerminals.length > 0 ? newTerminals[newTerminals.length - 1].id : null;
         }
-
         return {
             terminals: newTerminals.map(t => ({
                 ...t,
@@ -200,7 +166,6 @@ export const useEditorStore = create<EditorState>((set, get) => ({
             activeTerminalId: newActiveId,
         };
     }),
-
     setActiveTerminal: (id) => set((state) => ({
         terminals: state.terminals.map(t => ({
             ...t,
@@ -208,48 +173,40 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         })),
         activeTerminalId: id,
     })),
-
     appendToTerminal: (id, line) => set((state) => ({
         terminals: state.terminals.map(t =>
             t.id === id ? { ...t, output: [...t.output, line] } : t
         ),
     })),
-
     clearTerminal: (id) => set((state) => ({
         terminals: state.terminals.map(t =>
             t.id === id ? { ...t, output: [] } : t
         ),
     })),
-
     updateTerminalName: (id, name) => set((state) => ({
         terminals: state.terminals.map(t =>
             t.id === id ? { ...t, name } : t
         ),
     })),
-
     updateTerminalCwd: (id, cwd) => set((state) => ({
         terminals: state.terminals.map(t =>
             t.id === id ? { ...t, cwd } : t
         ),
     })),
-
     activateVenvInTerminal: (id, venvPath) => set((state) => ({
         terminals: state.terminals.map(t =>
             t.id === id ? { ...t, venvActivated: true, venvPath } : t
         ),
     })),
-
     setTerminalRunning: (id, isRunning) => set((state) => ({
         terminals: state.terminals.map(t =>
             t.id === id ? { ...t, isRunning } : t
         ),
     })),
-
     adbDevices: [],
     setAdbDevices: (devices) => set({ adbDevices: devices }),
     avdList: [],
     setAvdList: (avds) => set({ avdList: avds }),
-
     setFileTree: (tree) => set({ fileTree: tree }),
     setProjectPath: (path) => set({ projectPath: path }),
     setActiveView: (view) => set({ activeView: view }),
@@ -261,7 +218,6 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     setSearchQuery: (query) => set({ searchQuery: query }),
     setSelectedNode: (node) => set({ selectedNode: node }),
     setCreationState: (state) => set({ creationState: state }),
-
     setRunConfigurations: (configs) => set({ runConfigurations: configs }),
     setActiveRunConfigId: (id) => set({ activeRunConfigId: id }),
     setRunConfigDialogOpen: (isOpen) => set({ isRunConfigDialogOpen: isOpen }),
@@ -269,8 +225,6 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         runConfigurations: [...state.runConfigurations, config],
         activeRunConfigId: config.id
     })),
-
-    // Split Editor Actions
     splitEditorHorizontal: () => set((state) => {
         if (state.splitDirection !== 'none') return state;
         return {
@@ -282,7 +236,6 @@ export const useEditorStore = create<EditorState>((set, get) => ({
             activeGroupId: 'group-2'
         };
     }),
-
     splitEditorVertical: () => set((state) => {
         if (state.splitDirection !== 'none') return state;
         return {
@@ -294,7 +247,6 @@ export const useEditorStore = create<EditorState>((set, get) => ({
             activeGroupId: 'group-2'
         };
     }),
-
     closeSplit: () => set((state) => {
         const primaryGroup = state.editorGroups[0];
         return {
@@ -304,20 +256,16 @@ export const useEditorStore = create<EditorState>((set, get) => ({
             activeFile: primaryGroup?.activeFile || state.activeFile
         };
     }),
-
     setActiveGroup: (groupId) => set({ activeGroupId: groupId }),
-
     setGroupActiveFile: (groupId, filePath) => set((state) => ({
         editorGroups: state.editorGroups.map(group =>
             group.id === groupId ? { ...group, activeFile: filePath } : group
         ),
         activeFile: groupId === state.activeGroupId ? filePath : state.activeFile
     })),
-
     performSearch: async (query) => {
         const { projectPath } = get();
         if (!projectPath || !query.trim()) return;
-
         set({ isSearching: true, searchQuery: query });
         try {
             const results = await invoke<SearchResult[]>("search_in_files", {
@@ -332,7 +280,6 @@ export const useEditorStore = create<EditorState>((set, get) => ({
             set({ isSearching: false });
         }
     },
-
     refreshTree: async () => {
         const { projectPath } = get();
         if (!projectPath) return;
@@ -343,7 +290,6 @@ export const useEditorStore = create<EditorState>((set, get) => ({
             console.error("Failed to refresh tree:", e);
         }
     },
-
     openProjectDialog: async () => {
         try {
             const selected = await open({
@@ -351,7 +297,6 @@ export const useEditorStore = create<EditorState>((set, get) => ({
                 multiple: false,
                 recursive: true,
             });
-
             if (selected && typeof selected === "string") {
                 await get().openProjectByPath(selected);
             }
@@ -359,7 +304,6 @@ export const useEditorStore = create<EditorState>((set, get) => ({
             console.error("Failed to open project:", err);
         }
     },
-
     openProjectByPath: async (path: string) => {
         try {
             const tree = await invoke<FileNode>("load_project_tree", {
@@ -380,15 +324,11 @@ export const useEditorStore = create<EditorState>((set, get) => ({
             }
         }
     },
-
     openFile: (file) => {
-        // Emit file open event for plugins
         pluginEvents.emit('file:open', file.path);
-
         set((state) => {
             const exists = state.openFiles.find((f) => f.path === file.path);
             const newActiveFile = file.path;
-
             if (exists) {
                 return {
                     activeFile: newActiveFile,
@@ -410,21 +350,17 @@ export const useEditorStore = create<EditorState>((set, get) => ({
             };
         });
     },
-
     closeFile: (path) => set((state) => {
         const newOpenFiles = state.openFiles.filter((f) => f.path !== path);
         let newActiveFile = state.activeFile;
-
         if (state.activeFile === path) {
             newActiveFile = newOpenFiles.length > 0 ? newOpenFiles[newOpenFiles.length - 1].path : null;
         }
-
         return {
             openFiles: newOpenFiles,
             activeFile: newActiveFile
         };
     }),
-
     setActiveFile: (path) => set((state) => ({
         activeFile: path,
         editorGroups: state.editorGroups.map(group =>
@@ -433,14 +369,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
                 : group
         )
     })),
-
     updateFileContent: (path, content, markDirty = true) => {
-        // Debounce file:change events to reduce plugin overhead
-        // Clear existing debounce timer for this file
         const timerId = (window as any).__fileChangeTimers?.[path];
         if (timerId) clearTimeout(timerId);
-
-        // Set new debounce timer (500ms delay)
         if (!(window as any).__fileChangeTimers) {
             (window as any).__fileChangeTimers = {};
         }
@@ -448,34 +379,27 @@ export const useEditorStore = create<EditorState>((set, get) => ({
             pluginEvents.emit('file:change', path, content);
             delete (window as any).__fileChangeTimers[path];
         }, 500);
-
-        // Update state immediately (don't debounce state updates)
         set((state) => ({
             openFiles: state.openFiles.map((f) =>
                 f.path === path ? { ...f, content, isDirty: markDirty ? true : f.isDirty } : f
             )
         }));
     },
-
     markFileDirty: (path, isDirty) => set((state) => ({
         openFiles: state.openFiles.map((f) =>
             f.path === path ? { ...f, isDirty } : f
         )
     })),
-
     renameFile: (oldPath, newPath) => set((state) => {
         const fileToRename = state.openFiles.find(f => f.path === oldPath);
         if (!fileToRename) return state;
-
         const newName = newPath.split(/[\/\\]/).pop() || newPath;
         const newOpenFiles = state.openFiles.map(f =>
             f.path === oldPath
                 ? { ...f, path: newPath, name: newName }
                 : f
         );
-
         const newActiveFile = state.activeFile === oldPath ? newPath : state.activeFile;
-
         return {
             openFiles: newOpenFiles,
             activeFile: newActiveFile,
@@ -486,13 +410,11 @@ export const useEditorStore = create<EditorState>((set, get) => ({
             )
         };
     }),
-
     addRecentProject: (path) => set((state) => {
         const newRecent = [path, ...state.recentProjects.filter(p => p !== path)].slice(0, 10);
         localStorage.setItem('recentProjects', JSON.stringify(newRecent));
         return { recentProjects: newRecent };
     }),
-
     removeRecentProject: (path) => set((state) => {
         const newRecent = state.recentProjects.filter(p => p !== path);
         localStorage.setItem('recentProjects', JSON.stringify(newRecent));

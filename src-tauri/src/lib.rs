@@ -4,11 +4,11 @@ mod formatter;
 mod gh;
 mod git;
 mod models;
+mod opener;
 mod plugins;
 mod search;
 mod terminal;
 mod todos;
-
 use adb::{adb_connect, adb_devices, adb_disconnect, emulator_list_avds, emulator_start};
 use filesystem::{
     create_directory, create_file, delete_item, load_project_tree, read_dir, read_file_content,
@@ -16,7 +16,6 @@ use filesystem::{
 };
 use formatter::{format_code, format_file};
 use search::fuzzy_search_files;
-
 use gh::{
     gh_api, gh_auth_login, gh_auth_logout, gh_auth_status, gh_browse, gh_browse_issue,
     gh_browse_pr, gh_gist_create, gh_gist_delete, gh_gist_list, gh_gist_view, gh_issue_close,
@@ -45,15 +44,13 @@ use plugins::{
 };
 use std::env;
 use terminal::{
-    detect_virtual_environments, execute_shell_command, kill_terminal_process, run_command,
+    detect_virtual_environments, execute_shell_command, resize_pty, spawn_pty, write_pty,
 };
 use todos::search_todos;
-
 #[tauri::command]
 fn get_cli_args() -> Vec<String> {
     env::args().collect()
 }
-
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -70,11 +67,13 @@ pub fn run() {
             rename_item,
             search_in_files,
             fuzzy_search_files,
-            run_command,
+            spawn_pty,
+            write_pty,
+            resize_pty,
             read_dir,
-            kill_terminal_process,
             execute_shell_command,
             detect_virtual_environments,
+            opener::open_path,
             git_status_check,
             git_status_full,
             git_add,
@@ -126,7 +125,6 @@ pub fn run() {
             git_config_list,
             git_current_branch,
             git_search_commits,
-            // GitHub CLI commands
             gh_auth_status,
             gh_auth_login,
             gh_auth_logout,
@@ -177,7 +175,6 @@ pub fn run() {
             gh_api,
             // TODO scanner
             search_todos,
-            // Code formatter
             format_code,
             format_file,
             get_cli_args,
@@ -186,7 +183,6 @@ pub fn run() {
             adb_disconnect,
             emulator_list_avds,
             emulator_start,
-            // Plugin System
             ensure_plugin_dir,
             discover_plugins,
             load_plugin,

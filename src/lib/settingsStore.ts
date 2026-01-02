@@ -1,6 +1,5 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-
 export interface EditorSettings {
     fontSize: number;
     fontFamily: string;
@@ -11,12 +10,10 @@ export interface EditorSettings {
     tabSize: number;
     autoSave: boolean;
 }
-
 interface SettingsState {
     settings: EditorSettings;
     updateSettings: (newSettings: Partial<EditorSettings>) => void;
 }
-
 export const useSettingsStore = create<SettingsState>()(
     persist(
         (set) => ({

@@ -16,7 +16,6 @@ import { useEditorStore } from "../lib/store";
 import { Button } from "./ui/button";
 import { cn } from "../lib/utils";
 import AdbWidget from "./AdbWidget";
-
 export default function TitleBar() {
   const [isMaximized, setIsMaximized] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -34,19 +33,16 @@ export default function TitleBar() {
     projectPath,
   } = useEditorStore();
   const appWindow = getCurrentWindow();
-
   useEffect(() => {
     const checkMaximized = async () => {
       setIsMaximized(await appWindow.isMaximized());
     };
-
     checkMaximized();
     const unlisten = appWindow.listen("tauri://resize", checkMaximized);
     return () => {
       unlisten.then((f) => f());
     };
   }, []);
-
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -62,23 +58,18 @@ export default function TitleBar() {
         setActiveMenuDropdown(null);
       }
     };
-
     if (isMenuOpen || activeMenuDropdown) {
       document.addEventListener("mousedown", handleClickOutside);
     }
-
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [isMenuOpen, activeMenuDropdown]);
-
   const handleRun = async () => {
     const activeConfig = runConfigurations.find(
       (c) => c.id === activeRunConfigId
     );
     if (!activeConfig) return;
-
-    // Expand variables in cwd
     let workingDir = activeConfig.cwd || projectPath;
     if (workingDir) {
       workingDir = workingDir.replace(
@@ -86,14 +77,11 @@ export default function TitleBar() {
         projectPath || ""
       );
     }
-
     // Note: Run commands now output to the professional terminal view
-    // You can access it from the Activity Bar (Terminal icon)
     console.log(
       `Running: ${activeConfig.command} ${activeConfig.args?.join(" ") || ""}`
     );
   };
-
   const minimize = () => appWindow.minimize();
   const toggleMaximize = async () => {
     const max = await appWindow.isMaximized();
@@ -106,7 +94,6 @@ export default function TitleBar() {
     }
   };
   const close = () => appWindow.close();
-
   const menuItems = [
     {
       label: "File",
@@ -194,11 +181,9 @@ export default function TitleBar() {
     { label: "Terminal", items: [] },
     { label: "Help", items: [] },
   ];
-
   const activeConfig =
     runConfigurations.find((c) => c.id === activeRunConfigId) ||
     runConfigurations[0];
-
   return (
     <>
       <div
@@ -216,7 +201,6 @@ export default function TitleBar() {
           >
             <div className="w-4 h-4 bg-blue-500 rounded-sm" />
           </div>
-
           {/* Desktop Menu */}
           <div
             className="hidden md:flex items-center h-full"
@@ -239,7 +223,6 @@ export default function TitleBar() {
                 >
                   {menu.label}
                 </Button>
-
                 {/* Dropdown Menu */}
                 {activeMenuDropdown === menu.label && menu.items.length > 0 && (
                   <div
@@ -278,7 +261,6 @@ export default function TitleBar() {
               </div>
             ))}
           </div>
-
           {/* Mobile Menu Icon */}
           <Button
             variant="ghost"
@@ -288,7 +270,6 @@ export default function TitleBar() {
           >
             <Menu size={16} />
           </Button>
-
           {/* Mobile Menu Dropdown */}
           {isMenuOpen && (
             <div
@@ -312,7 +293,6 @@ export default function TitleBar() {
             </div>
           )}
         </div>
-
         {/* Center: Run Toolbar (JetBrains Style) */}
         <div
           className="flex items-center gap-3 px-2 flex-1 min-w-0 overflow-hidden"
@@ -323,7 +303,6 @@ export default function TitleBar() {
               {activeConfig?.name || "Add Configuration..."}
             </span>
             <ChevronDown size={12} className="text-gray-500 shrink-0" />
-
             {/* Dropdown Menu */}
             <div className="absolute top-full left-0 mt-1 w-56 bg-[#252526] border border-[#454545] rounded shadow-xl hidden group-hover:block z-50 py-1">
               {runConfigurations.map((config) => (
@@ -353,7 +332,6 @@ export default function TitleBar() {
               </div>
             </div>
           </div>
-
           <div className="flex items-center gap-1 shrink-0">
             <Button
               variant="ghost"
@@ -382,7 +360,6 @@ export default function TitleBar() {
             </Button>
           </div>
         </div>
-
         {/* ADB Widget */}
         <div
           className="flex items-center px-2 flex-shrink-0"
@@ -390,7 +367,6 @@ export default function TitleBar() {
         >
           <AdbWidget />
         </div>
-
         {/* Right Section: Window Controls */}
         <div className="flex items-center h-full flex-shrink-0">
           <Button

@@ -13,7 +13,6 @@ import {
   Trash2,
 } from "lucide-react";
 import { Badge } from "./ui/badge";
-
 interface MarketplacePlugin {
   id: string;
   name: string;
@@ -25,9 +24,7 @@ interface MarketplacePlugin {
   category: string;
   tags: string[];
 }
-
 type ViewMode = "installed" | "marketplace";
-
 export default function PluginManagerView() {
   const {
     availablePlugins,
@@ -40,7 +37,6 @@ export default function PluginManagerView() {
     installPlugin,
     uninstallPlugin,
   } = usePluginStore();
-
   const [selectedPlugin, setSelectedPlugin] = useState<PluginManifest | null>(
     null
   );
@@ -50,12 +46,10 @@ export default function PluginManagerView() {
   >([]);
   const [selectedMarketplacePlugin, setSelectedMarketplacePlugin] =
     useState<MarketplacePlugin | null>(null);
-
   useEffect(() => {
     initializePluginSystem();
     loadMarketplacePlugins();
   }, []);
-
   const loadMarketplacePlugins = async () => {
     try {
       const response = await fetch("/plugins/marketplace.json");
@@ -65,15 +59,12 @@ export default function PluginManagerView() {
       console.error("Failed to load marketplace:", error);
     }
   };
-
   const isPluginLoaded = (pluginId: string) => {
     return loadedPlugins.has(pluginId);
   };
-
   const isPluginInstalled = (pluginId: string) => {
     return availablePlugins.some((p) => p.id === pluginId);
   };
-
   const handleTogglePlugin = async (plugin: PluginManifest) => {
     if (isPluginLoaded(plugin.id)) {
       await disablePlugin(plugin.id);
@@ -81,7 +72,6 @@ export default function PluginManagerView() {
       await enablePlugin(plugin.id);
     }
   };
-
   const handleUninstallPlugin = async (plugin: PluginManifest) => {
     if (confirm(`Are you sure you want to uninstall ${plugin.name}?`)) {
       try {
@@ -92,7 +82,6 @@ export default function PluginManagerView() {
       }
     }
   };
-
   const handleInstallPlugin = async (plugin: MarketplacePlugin) => {
     try {
       const pluginUrl = plugin.id; // In real scenario, this would be a download URL
@@ -101,7 +90,6 @@ export default function PluginManagerView() {
       console.error("Failed to install plugin:", err);
     }
   };
-
   return (
     <div className="flex h-full bg-[#1e1e1e]">
       {/* Plugin List */}
@@ -128,7 +116,6 @@ export default function PluginManagerView() {
               Marketplace
             </Button>
           </div>
-
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold text-white flex items-center gap-2">
               <Plug size={20} />
@@ -162,7 +149,6 @@ export default function PluginManagerView() {
             </div>
           )}
         </div>
-
         <ScrollArea className="flex-1">
           {viewMode === "installed" && availablePlugins.length === 0 && (
             <div className="p-8 text-center text-gray-500">
@@ -173,7 +159,6 @@ export default function PluginManagerView() {
               </p>
             </div>
           )}
-
           {viewMode === "installed" && availablePlugins.length > 0 && (
             <div className="p-2">
               {availablePlugins.map((plugin) => (
@@ -220,7 +205,6 @@ export default function PluginManagerView() {
               ))}
             </div>
           )}
-
           {viewMode === "marketplace" && (
             <div className="p-2">
               {marketplacePlugins.map((plugin) => (
@@ -271,7 +255,6 @@ export default function PluginManagerView() {
           )}
         </ScrollArea>
       </div>
-
       {/* Plugin Details */}
       <div className="flex-1 flex flex-col">
         {selectedPlugin ? (
@@ -308,7 +291,6 @@ export default function PluginManagerView() {
                   </Button>
                 </div>
               </div>
-
               <div className="flex items-center gap-4 text-sm text-gray-400">
                 <span>Version {selectedPlugin.version}</span>
                 {selectedPlugin.author && (
@@ -322,7 +304,6 @@ export default function PluginManagerView() {
                 </Badge>
               </div>
             </div>
-
             <ScrollArea className="flex-1 p-6">
               <div className="space-y-6">
                 {/* Contributions */}
@@ -331,7 +312,6 @@ export default function PluginManagerView() {
                     <h2 className="text-lg font-semibold text-white mb-4">
                       Contributions
                     </h2>
-
                     {selectedPlugin.contributes.commands &&
                       selectedPlugin.contributes.commands.length > 0 && (
                         <div className="mb-4">
@@ -356,7 +336,6 @@ export default function PluginManagerView() {
                           </div>
                         </div>
                       )}
-
                     {selectedPlugin.contributes.languages &&
                       selectedPlugin.contributes.languages.length > 0 && (
                         <div className="mb-4">
@@ -379,7 +358,6 @@ export default function PluginManagerView() {
                           </div>
                         </div>
                       )}
-
                     {selectedPlugin.contributes.keybindings &&
                       selectedPlugin.contributes.keybindings.length > 0 && (
                         <div className="mb-4">
@@ -406,7 +384,6 @@ export default function PluginManagerView() {
                       )}
                   </div>
                 )}
-
                 {/* Permissions */}
                 {selectedPlugin.permissions &&
                   selectedPlugin.permissions.length > 0 && (
@@ -426,7 +403,6 @@ export default function PluginManagerView() {
                       </div>
                     </div>
                   )}
-
                 {/* Activation Events */}
                 {selectedPlugin.activation_events &&
                   selectedPlugin.activation_events.length > 0 && (
@@ -450,7 +426,6 @@ export default function PluginManagerView() {
             </ScrollArea>
           </>
         ) : selectedMarketplacePlugin ? (
-          /* Marketplace Plugin Details */
           <>
             <div className="p-6 border-b border-[#333]">
               <div className="flex items-start justify-between mb-4">
@@ -488,7 +463,6 @@ export default function PluginManagerView() {
                     : "Install"}
                 </Button>
               </div>
-
               <div className="grid grid-cols-3 gap-4 text-sm">
                 <div>
                   <span className="text-gray-500">Version:</span>
@@ -510,7 +484,6 @@ export default function PluginManagerView() {
                 </div>
               </div>
             </div>
-
             <ScrollArea className="flex-1">
               <div className="p-6 space-y-6">
                 {selectedMarketplacePlugin.tags &&
@@ -532,7 +505,6 @@ export default function PluginManagerView() {
                       </div>
                     </div>
                   )}
-
                 <div>
                   <h2 className="text-lg font-semibold text-white mb-3">
                     About

@@ -19,11 +19,9 @@ import {
 } from "./ui/resizable";
 import { motion } from "motion/react";
 import { useRef, useState, useCallback } from "react";
-
 interface EditorPaneProps {
   groupId: string;
 }
-
 function EditorPane({ groupId }: EditorPaneProps) {
   const {
     openFiles,
@@ -39,7 +37,6 @@ function EditorPane({ groupId }: EditorPaneProps) {
     isFindReplaceMode,
     setFindWidgetOpen,
   } = useEditorStore();
-
   const editorRef = useRef<CodeEditorHandle>(null);
   const [matchCount, setMatchCount] = useState<{
     current: number;
@@ -47,24 +44,18 @@ function EditorPane({ groupId }: EditorPaneProps) {
   }>();
   const [fileToClose, setFileToClose] = useState<string | null>(null);
   const [isCloseDialogOpen, setIsCloseDialogOpen] = useState(false);
-
-  // Memoized content change handler
   const handleContentChange = useCallback(
     (path: string, value: string) => {
-      // Update immediately for responsive typing - debouncing is handled in store for plugins
       updateFileContent(path, value, true);
     },
     [updateFileContent]
   );
-
   const group = editorGroups.find((g) => g.id === groupId);
   const activeFileObj = openFiles.find((f) => f.path === group?.activeFile);
   const isActive = activeGroupId === groupId;
-
   const handleFind = (query: string, options: FindOptions) => {
     const editor = editorRef.current?.getEditor();
     if (!editor) return;
-
     editor.trigger("find", "actions.find", {
       searchString: query,
       matchCase: options.caseSensitive,
@@ -72,21 +63,18 @@ function EditorPane({ groupId }: EditorPaneProps) {
       isRegex: options.regex,
     });
   };
-
   const handleFindNext = () => {
     const editor = editorRef.current?.getEditor();
     if (editor) {
       editor.trigger("find", "editor.action.nextMatchFindAction", null);
     }
   };
-
   const handleFindPrevious = () => {
     const editor = editorRef.current?.getEditor();
     if (editor) {
       editor.trigger("find", "editor.action.previousMatchFindAction", null);
     }
   };
-
   const handleReplace = (replacement: string) => {
     const editor = editorRef.current?.getEditor();
     if (editor) {
@@ -95,7 +83,6 @@ function EditorPane({ groupId }: EditorPaneProps) {
       });
     }
   };
-
   const handleReplaceAll = (replacement: string) => {
     const editor = editorRef.current?.getEditor();
     if (editor) {
@@ -104,7 +91,6 @@ function EditorPane({ groupId }: EditorPaneProps) {
       });
     }
   };
-
   const handleSave = async () => {
     if (!activeFileObj) return;
     try {
@@ -117,7 +103,6 @@ function EditorPane({ groupId }: EditorPaneProps) {
       console.error("Failed to save:", err);
     }
   };
-
   const handleCloseFile = (filePath: string) => {
     const file = openFiles.find((f) => f.path === filePath);
     if (file?.isDirty) {
@@ -127,10 +112,8 @@ function EditorPane({ groupId }: EditorPaneProps) {
       closeFile(filePath);
     }
   };
-
   const handleConfirmClose = async (saveFirst: boolean) => {
     if (!fileToClose) return;
-
     if (saveFirst) {
       const file = openFiles.find((f) => f.path === fileToClose);
       if (file) {
@@ -145,12 +128,10 @@ function EditorPane({ groupId }: EditorPaneProps) {
         }
       }
     }
-
     closeFile(fileToClose);
     setIsCloseDialogOpen(false);
     setFileToClose(null);
   };
-
   return (
     <div
       className={`flex flex-col h-full bg-[#1e1e1e] border-2 transition-colors ${
@@ -201,7 +182,6 @@ function EditorPane({ groupId }: EditorPaneProps) {
             </motion.div>
           ))}
         </div>
-
         {/* Save Button */}
         {activeFileObj && (
           <div className="flex items-center px-2 border-l border-[#1e1e1e] bg-[#252526]">
@@ -231,7 +211,6 @@ function EditorPane({ groupId }: EditorPaneProps) {
           </div>
         )}
       </div>
-
       {/* Editor */}
       <div className="flex-1 relative">
         {isActive && isFindWidgetOpen && (
@@ -247,7 +226,6 @@ function EditorPane({ groupId }: EditorPaneProps) {
             matchCount={matchCount}
           />
         )}
-
         {/* Always keep editor mounted but hidden when no file is active to improve performance */}
         <div className={`h-full ${activeFileObj ? "" : "hidden"}`}>
           <CodeEditor
@@ -262,7 +240,6 @@ function EditorPane({ groupId }: EditorPaneProps) {
             }}
           />
         </div>
-
         {!activeFileObj && (
           <div className="flex items-center justify-center h-full text-gray-500 bg-[#1e1e1e]">
             <div className="text-center">
@@ -291,7 +268,6 @@ function EditorPane({ groupId }: EditorPaneProps) {
           </div>
         )}
       </div>
-
       {/* Unsaved Changes Dialog */}
       <Dialog open={isCloseDialogOpen} onOpenChange={setIsCloseDialogOpen}>
         <DialogContent className="sm:max-w-[425px] bg-[#252526] text-white border-[#454545]">
@@ -336,7 +312,6 @@ function EditorPane({ groupId }: EditorPaneProps) {
     </div>
   );
 }
-
 export default function SplitEditorLayout() {
   const {
     splitDirection,
@@ -344,11 +319,9 @@ export default function SplitEditorLayout() {
     splitEditorVertical,
     closeSplit,
   } = useEditorStore();
-
   if (splitDirection === "none") {
     return <EditorPane groupId="group-1" />;
   }
-
   return (
     <div className="flex-1 relative">
       <ResizablePanelGroup
@@ -360,17 +333,14 @@ export default function SplitEditorLayout() {
         <ResizablePanel defaultSize={50} minSize={20}>
           <EditorPane groupId="group-1" />
         </ResizablePanel>
-
         <ResizableHandle
           withHandle
           className="bg-[#1e1e1e] hover:bg-blue-500/30 transition-colors"
         />
-
         <ResizablePanel defaultSize={50} minSize={20}>
           <EditorPane groupId="group-2" />
         </ResizablePanel>
       </ResizablePanelGroup>
-
       {/* Split Controls */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}

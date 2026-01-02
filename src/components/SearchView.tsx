@@ -4,7 +4,6 @@ import { invoke } from "@tauri-apps/api/core";
 import { getLanguageFromPath } from "../lib/utils";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
-
 export default function SearchView() {
   const {
     searchResults,
@@ -14,17 +13,13 @@ export default function SearchView() {
     setSearchQuery,
     openFile,
   } = useEditorStore();
-
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     performSearch(searchQuery);
   };
-
   const clearSearch = () => {
     setSearchQuery("");
-    // Optionally clear results too, but keeping them might be useful
   };
-
   const handleResultClick = async (result: any) => {
     try {
       const content = await invoke<string>("read_file_content", {
@@ -42,7 +37,6 @@ export default function SearchView() {
       console.error("Error opening file:", err);
     }
   };
-
   return (
     <div className="flex flex-col h-full bg-[#252526] text-[#cccccc] w-64 border-r border-[#1e1e1e]">
       <div className="p-4">
@@ -75,14 +69,12 @@ export default function SearchView() {
           )}
         </form>
       </div>
-
       <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-[#424242] scrollbar-track-transparent">
         {searchResults.length > 0 && (
           <div className="px-4 pb-2 text-xs text-gray-400">
             {searchResults.length} results found
           </div>
         )}
-
         {searchResults.map((result, i) => (
           <div
             key={i}

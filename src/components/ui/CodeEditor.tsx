@@ -9,8 +9,6 @@ import {
   memo,
 } from "react";
 import * as monaco from "monaco-editor";
-
-// Configure Monaco to use local files and disable source maps completely
 self.MonacoEnvironment = {
   getWorkerUrl: function (_moduleId: string, label: string) {
     if (label === "json") {
@@ -28,48 +26,32 @@ self.MonacoEnvironment = {
     return "/node_modules/monaco-editor/esm/vs/editor/editor.worker.js";
   },
 };
-
-// Configure loader to use local Monaco
 loader.config({ monaco });
-
-// Preload Monaco to improve first-open performance
 loader.init().catch((err) => console.error("Failed to preload Monaco:", err));
-
-// Global flag to ensure language configs run only once
 let languagesConfigured = false;
-
-// Polyfill for requestIdleCallback
 const requestIdleCallback =
   window.requestIdleCallback || ((cb) => setTimeout(cb, 1));
-
 interface CodeEditorProps {
   code: string;
   language?: string;
   filePath?: string;
   onChange?: (value: string | undefined) => void;
 }
-
 export interface CodeEditorHandle {
   getEditor: () => any;
 }
-
 const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(
   ({ code, language = "javascript", filePath, onChange }, ref) => {
     const { settings } = useSettingsStore();
     const editorRef = useRef<any>(null);
     const [isLoading, setIsLoading] = useState(true);
-
     useImperativeHandle(ref, () => ({
       getEditor: () => editorRef.current,
     }));
-
     const configureLanguages = (monaco: any) => {
       if (languagesConfigured) return;
       languagesConfigured = true;
-
-      // Defer heavy language config to not block initial render
       requestIdleCallback(() => {
-        // Configure IntelliSense for all languages
         monaco.languages.typescript.javascriptDefaults.setDiagnosticsOptions({
           noSemanticValidation: false,
           noSyntaxValidation: false,
@@ -77,10 +59,7 @@ const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(
             2307, 2552, 2304, 2874, 2584, 2693, 2339, 2580,
           ], // Ignore module, React, DOM, and property errors
         });
-
-        // Add validation delay to reduce CPU usage during typing
         monaco.languages.typescript.javascriptDefaults.setEagerModelSync(false);
-
         monaco.languages.typescript.javascriptDefaults.setCompilerOptions({
           target: monaco.languages.typescript.ScriptTarget.Latest,
           allowNonTsExtensions: true,
@@ -97,7 +76,6 @@ const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(
           typeRoots: ["node_modules/@types"],
           lib: ["ES2020", "DOM", "DOM.Iterable", "WebWorker"],
         });
-
         monaco.languages.typescript.typescriptDefaults.setDiagnosticsOptions({
           noSemanticValidation: false,
           noSyntaxValidation: false,
@@ -105,10 +83,7 @@ const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(
             2307, 2552, 2304, 2874, 2584, 2693, 2339, 2580,
           ], // Ignore module, React, DOM, and property errors
         });
-
-        // Add validation delay for TypeScript too
         monaco.languages.typescript.typescriptDefaults.setEagerModelSync(false);
-
         monaco.languages.typescript.typescriptDefaults.setCompilerOptions({
           target: monaco.languages.typescript.ScriptTarget.Latest,
           allowNonTsExtensions: true,
@@ -124,15 +99,12 @@ const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(
           typeRoots: ["node_modules/@types"],
           lib: ["ES2020", "DOM", "DOM.Iterable", "WebWorker"],
         });
-
-        // Configure other languages
         monaco.languages.json.jsonDefaults.setDiagnosticsOptions({
           validate: true,
           allowComments: true,
           schemas: [],
           enableSchemaRequest: true,
         });
-
         monaco.languages.html.htmlDefaults.setOptions({
           format: {
             tabSize: 2,
@@ -150,7 +122,6 @@ const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(
           },
           suggest: { html5: true },
         });
-
         monaco.languages.css.cssDefaults.setOptions({
           validate: true,
           lint: {
@@ -176,27 +147,20 @@ const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(
         });
       });
     };
-
     const handleEditorDidMount: OnMount = (editor, monaco) => {
       editorRef.current = editor;
       configureLanguages(monaco);
-
-      // Add custom keyboard shortcuts for navigation
       editor.addCommand(monaco.KeyCode.F12, () => {
         editor.trigger("keyboard", "editor.action.revealDefinition", {});
       });
-
       editor.addCommand(monaco.KeyMod.Shift | monaco.KeyCode.F12, () => {
         editor.trigger("keyboard", "editor.action.goToReferences", {});
       });
-
       editor.addCommand(monaco.KeyMod.Alt | monaco.KeyCode.F12, () => {
         editor.trigger("keyboard", "editor.action.peekDefinition", {});
       });
-
       setIsLoading(false);
     };
-
     return (
       <div className="h-full w-full bg-[#1e1e1e] relative">
         {isLoading && (
@@ -236,7 +200,6 @@ const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(
               verticalScrollbarSize: 10,
               horizontalScrollbarSize: 10,
             },
-            // Optimize IntelliSense for better performance
             quickSuggestions: {
               other: "on",
               comments: false,
@@ -274,7 +237,6 @@ const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(
               autoFindInSelection: "never",
               seedSearchStringFromSelection: "never",
             },
-            // Performance optimizations
             accessibilitySupport: "off", // Disable unless needed
             hover: {
               delay: 300, // Add delay to hover tooltips
@@ -297,10 +259,7 @@ const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(
     );
   }
 );
-
 CodeEditor.displayName = "CodeEditor";
-
-// Memoize to prevent unnecessary re-renders
 export default memo(CodeEditor, (prevProps, nextProps) => {
   return (
     prevProps.code === nextProps.code &&

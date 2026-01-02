@@ -2,14 +2,12 @@ import { FilePlus, FolderPlus, RefreshCw } from "lucide-react";
 import { useEditorStore } from "../lib/store";
 import FileTreeNode, { type FileNode } from "./ui/FileTree";
 import { Button } from "./ui/button";
-
 interface SidebarProps {
   title: string;
   fileTree: FileNode | null;
   onFileSelect: (path: string) => void;
   isVisible: boolean;
 }
-
 export default function Sidebar({
   title,
   fileTree,
@@ -23,19 +21,14 @@ export default function Sidebar({
     setSelectedNode,
     setCreationState,
   } = useEditorStore();
-
   if (!isVisible) return null;
-
   const handleCreateTrigger = (type: "file" | "folder") => {
     if (!projectPath) return;
-
     let parentPath = projectPath;
     if (selectedNode) {
       if (selectedNode.isDir) {
         parentPath = selectedNode.path;
       } else {
-        // If file is selected, create in parent dir
-        // We need to handle both slash types just in case, though usually it's consistent
         const separator = selectedNode.path.includes("\\") ? "\\" : "/";
         const lastIndex = selectedNode.path.lastIndexOf(separator);
         if (lastIndex !== -1) {
@@ -43,10 +36,8 @@ export default function Sidebar({
         }
       }
     }
-
     setCreationState({ type, parentPath });
   };
-
   return (
     <div
       className="w-64 bg-[#252526] flex flex-col border-r border-[#1e1e1e] select-none"
@@ -93,7 +84,6 @@ export default function Sidebar({
           </Button>
         </div>
       </div>
-
       <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-[#424242] scrollbar-track-transparent">
         {fileTree ? (
           <div className="py-1">

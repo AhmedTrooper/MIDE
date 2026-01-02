@@ -4,7 +4,6 @@ import { HashRouter } from "react-router-dom"; // Use HashRouter for Desktop App
 import "./index.css";
 import App from "./App.tsx";
 import { ErrorBoundary } from "./components/ui/ErrorBoundary.tsx";
-
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <ErrorBoundary>

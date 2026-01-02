@@ -1,10 +1,8 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
-
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
-
 export function getLanguageFromPath(path: string): string {
   const ext = path.split('.').pop()?.toLowerCase();
   switch (ext) {

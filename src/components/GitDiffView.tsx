@@ -3,20 +3,17 @@ import { invoke } from "@tauri-apps/api/core";
 import { X, Copy, Check } from "lucide-react";
 import { Button } from "./ui/button";
 import { ScrollArea } from "./ui/scroll-area";
-
 interface GitDiff {
   file: string;
   content: string;
   staged: boolean;
 }
-
 interface GitDiffViewProps {
   projectPath: string;
   file: string;
   staged: boolean;
   onClose: () => void;
 }
-
 export default function GitDiffView({
   projectPath,
   file,
@@ -26,12 +23,10 @@ export default function GitDiffView({
   const [diff, setDiff] = useState<GitDiff | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [copied, setCopied] = useState(false);
-
   const isCommandNotFoundError = (err: unknown) => {
     const msg = String(err);
     return msg.includes("Command") && msg.toLowerCase().includes("not found");
   };
-
   const invokeWithFallback = async <T,>(
     names: string[],
     args: Record<string, unknown>
@@ -47,7 +42,6 @@ export default function GitDiffView({
     }
     throw lastErr;
   };
-
   useEffect(() => {
     const fetchDiff = async () => {
       setIsLoading(true);
@@ -63,10 +57,8 @@ export default function GitDiffView({
         setIsLoading(false);
       }
     };
-
     fetchDiff();
   }, [projectPath, file, staged]);
-
   const handleCopy = () => {
     if (diff) {
       navigator.clipboard.writeText(diff.content);
@@ -74,14 +66,12 @@ export default function GitDiffView({
       setTimeout(() => setCopied(false), 2000);
     }
   };
-
   const parseDiff = (diffContent: string) => {
     const lines = diffContent.split("\n");
     const parsed: Array<{
       type: "header" | "add" | "remove" | "context" | "hunk";
       content: string;
     }> = [];
-
     for (const line of lines) {
       if (line.startsWith("diff --git") || line.startsWith("index ")) {
         parsed.push({ type: "header", content: line });
@@ -95,10 +85,8 @@ export default function GitDiffView({
         parsed.push({ type: "context", content: line });
       }
     }
-
     return parsed;
   };
-
   const getLineStyle = (
     type: "header" | "add" | "remove" | "context" | "hunk"
   ) => {
@@ -117,7 +105,6 @@ export default function GitDiffView({
         return "text-gray-300 bg-[#1e1e1e]";
     }
   };
-
   return (
     <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center">
       <div className="bg-[#1e1e1e] border border-[#333] rounded-lg w-[90%] h-[90%] flex flex-col shadow-2xl">
@@ -152,7 +139,6 @@ export default function GitDiffView({
             </Button>
           </div>
         </div>
-
         {/* Diff Content */}
         <ScrollArea className="flex-1">
           {isLoading ? (
@@ -178,7 +164,6 @@ export default function GitDiffView({
             </div>
           )}
         </ScrollArea>
-
         {/* Footer */}
         <div className="flex items-center justify-between px-4 py-2 border-t border-[#333] bg-[#252526]">
           <div className="text-xs text-gray-400">

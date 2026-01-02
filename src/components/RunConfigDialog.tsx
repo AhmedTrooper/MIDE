@@ -3,7 +3,6 @@ import { X, Plus, Trash, Save } from "lucide-react";
 import { useEditorStore, type RunConfiguration } from "../lib/store";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
-
 export default function RunConfigDialog() {
   const {
     isRunConfigDialogOpen,
@@ -13,27 +12,21 @@ export default function RunConfigDialog() {
     activeRunConfigId,
     setActiveRunConfigId,
   } = useEditorStore();
-
   const [localConfigs, setLocalConfigs] = useState<RunConfiguration[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-
   useEffect(() => {
     if (isRunConfigDialogOpen) {
       setLocalConfigs(JSON.parse(JSON.stringify(runConfigurations)));
       setSelectedId(activeRunConfigId);
     }
   }, [isRunConfigDialogOpen, runConfigurations, activeRunConfigId]);
-
   if (!isRunConfigDialogOpen) return null;
-
   const selectedConfig = localConfigs.find((c) => c.id === selectedId);
-
   const handleSave = () => {
     setRunConfigurations(localConfigs);
     if (selectedId) setActiveRunConfigId(selectedId);
     setRunConfigDialogOpen(false);
   };
-
   const handleAdd = () => {
     const newConfig: RunConfiguration = {
       id: crypto.randomUUID(),
@@ -45,7 +38,6 @@ export default function RunConfigDialog() {
     setLocalConfigs([...localConfigs, newConfig]);
     setSelectedId(newConfig.id);
   };
-
   const handleDelete = (id: string) => {
     const newConfigs = localConfigs.filter((c) => c.id !== id);
     setLocalConfigs(newConfigs);
@@ -53,13 +45,11 @@ export default function RunConfigDialog() {
       setSelectedId(newConfigs[0]?.id || null);
     }
   };
-
   const updateConfig = (id: string, updates: Partial<RunConfiguration>) => {
     setLocalConfigs(
       localConfigs.map((c) => (c.id === id ? { ...c, ...updates } : c))
     );
   };
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
       <div className="w-[800px] h-[500px] bg-[#252526] rounded-lg shadow-2xl border border-[#454545] flex flex-col overflow-hidden">
@@ -77,7 +67,6 @@ export default function RunConfigDialog() {
             <X size={18} />
           </Button>
         </div>
-
         <div className="flex flex-1 overflow-hidden">
           {/* Sidebar List */}
           <div className="w-64 border-r border-[#333] flex flex-col bg-[#1e1e1e]">
@@ -117,7 +106,6 @@ export default function RunConfigDialog() {
               </Button>
             </div>
           </div>
-
           {/* Config Form */}
           <div className="flex-1 p-6 overflow-y-auto bg-[#252526]">
             {selectedConfig ? (
@@ -133,7 +121,6 @@ export default function RunConfigDialog() {
                     className="w-full bg-[#3c3c3c] border-[#333] text-white focus-visible:ring-[#007fd4]"
                   />
                 </div>
-
                 <div className="space-y-1">
                   <label className="text-xs text-gray-400">
                     Command / Executable
@@ -152,7 +139,6 @@ export default function RunConfigDialog() {
                     />
                   </div>
                 </div>
-
                 <div className="space-y-1">
                   <label className="text-xs text-gray-400">Arguments</label>
                   <Input
@@ -167,7 +153,6 @@ export default function RunConfigDialog() {
                     className="w-full bg-[#3c3c3c] border-[#333] text-white focus-visible:ring-[#007fd4]"
                   />
                 </div>
-
                 <div className="space-y-1">
                   <label className="text-xs text-gray-400">
                     Working Directory
@@ -190,7 +175,6 @@ export default function RunConfigDialog() {
             )}
           </div>
         </div>
-
         {/* Footer */}
         <div className="px-4 py-3 border-t border-[#333] flex justify-end gap-2 bg-[#1e1e1e]">
           <Button

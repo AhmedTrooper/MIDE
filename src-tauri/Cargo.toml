@@ -29,4 +29,6 @@ tauri-plugin-dialog = "2"
 tauri-plugin-shell = "2"
 lazy_static = "1.4"
 fuzzy-matcher = "0.3.7"
+portable-pty = "0.8"
+base64 = "0.21"
 

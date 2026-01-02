@@ -33,20 +33,17 @@ import {
   DialogTitle,
 } from "./dialog";
 import { Button } from "./button";
-
 export interface FileNode {
   name: string;
   path: string;
   is_dir: boolean;
   children?: FileNode[];
 }
-
 interface FileTreeProps {
   node: FileNode;
   onSelect: (path: string) => void;
   level?: number;
 }
-
 const FileTreeNode = ({ node, onSelect, level = 0 }: FileTreeProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [children, setChildren] = useState<FileNode[]>(node.children || []);
@@ -63,40 +60,29 @@ const FileTreeNode = ({ node, onSelect, level = 0 }: FileTreeProps) => {
   } = useEditorStore();
   const [newItemName, setNewItemName] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
-
-  // Update children when node prop changes (e.g. after refresh)
   useEffect(() => {
     if (node.children) {
       setChildren(node.children);
     }
   }, [node.children]);
-
-  // Dialog states
   const [isRenameOpen, setIsRenameOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [renameValue, setRenameValue] = useState(node.name);
-
   const isSelected = selectedNode?.path === node.path;
   const isCreatingHere = creationState?.parentPath === node.path;
-
-  // Auto-expand if creating inside this folder
   useEffect(() => {
     if (isCreatingHere && node.is_dir) {
       if (!isOpen) {
         handleToggle();
       }
-      // Focus input after render
       setTimeout(() => {
         if (inputRef.current) inputRef.current.focus();
       }, 50);
     }
   }, [isCreatingHere, node.is_dir]);
-
   const handleToggle = async () => {
     if (!node.is_dir) return;
-
     if (!isOpen) {
-      // Opening
       if (children.length === 0 && !isLoading) {
         setIsLoading(true);
         try {
@@ -112,29 +98,23 @@ const FileTreeNode = ({ node, onSelect, level = 0 }: FileTreeProps) => {
       }
       setIsOpen(true);
     } else {
-      // Closing
       setIsOpen(false);
     }
   };
-
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     setSelectedNode({ path: node.path, isDir: node.is_dir });
-
     if (node.is_dir) {
       handleToggle();
     } else {
       onSelect(node.path);
     }
   };
-
   const handleCreateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newItemName || !creationState) return;
-
     const separator = node.path.includes("\\") ? "\\" : "/";
     const fullPath = `${node.path}${separator}${newItemName}`;
-
     try {
       if (creationState.type === "file") {
         await invoke("create_file", { path: fullPath });
@@ -148,7 +128,6 @@ const FileTreeNode = ({ node, onSelect, level = 0 }: FileTreeProps) => {
       console.error("Failed to create item:", err);
     }
   };
-
   const handleRename = async () => {
     if (!renameValue || renameValue === node.name) {
       setIsRenameOpen(false);
@@ -160,20 +139,15 @@ const FileTreeNode = ({ node, onSelect, level = 0 }: FileTreeProps) => {
       const parentPath =
         lastIndex !== -1 ? node.path.substring(0, lastIndex) : "";
       const newPath = `${parentPath}${separator}${renameValue}`;
-
       await invoke("rename_item", { oldPath: node.path, newPath });
-
-      // Update open files in store if this file is open
       const { renameFile } = useEditorStore.getState();
       renameFile(node.path, newPath);
-
       await refreshTree();
       setIsRenameOpen(false);
     } catch (err) {
       console.error("Rename failed:", err);
     }
   };
-
   const handleDelete = async () => {
     try {
       await invoke("delete_item", { path: node.path });
@@ -183,14 +157,12 @@ const FileTreeNode = ({ node, onSelect, level = 0 }: FileTreeProps) => {
       console.error("Delete failed:", err);
     }
   };
-
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Escape") {
       setCreationState(null);
       setNewItemName("");
     }
   };
-
   const handleCopyPath = async () => {
     try {
       await navigator.clipboard.writeText(node.path);
@@ -198,7 +170,6 @@ const FileTreeNode = ({ node, onSelect, level = 0 }: FileTreeProps) => {
       console.error("Failed to copy path:", err);
     }
   };
-
   const handleCopyRelativePath = async () => {
     try {
       if (!projectPath) return;
@@ -210,35 +181,25 @@ const FileTreeNode = ({ node, onSelect, level = 0 }: FileTreeProps) => {
       console.error("Failed to copy relative path:", err);
     }
   };
-
   const handleOpenToSide = () => {
     if (!node.is_dir) {
       if (splitDirection === "none") {
         splitEditorVertical();
       }
-      // Small delay to let split happen, then open file
       setTimeout(() => {
         onSelect(node.path);
       }, 100);
     }
   };
-
   const handleRevealInExplorer = async () => {
     try {
-      // Use Tauri shell plugin to open file explorer
       const { Command } = await import("@tauri-apps/plugin-shell");
-
-      // Determine the appropriate command based on OS
       const platform = navigator.platform.toLowerCase();
-
       if (platform.includes("win")) {
-        // Windows: open explorer and select the file
         await Command.create("explorer", ["/select,", node.path]).execute();
       } else if (platform.includes("mac")) {
-        // macOS: use 'open' with reveal flag
         await Command.create("open", ["-R", node.path]).execute();
       } else {
-        // Linux: open the parent directory
         const separator = node.path.includes("\\") ? "\\" : "/";
         const lastIndex = node.path.lastIndexOf(separator);
         const parentPath =
@@ -249,7 +210,6 @@ const FileTreeNode = ({ node, onSelect, level = 0 }: FileTreeProps) => {
       console.error("Failed to reveal in explorer:", err);
     }
   };
-
   return (
     <div className="select-none text-sm font-sans">
       <ContextMenu>
@@ -266,7 +226,6 @@ const FileTreeNode = ({ node, onSelect, level = 0 }: FileTreeProps) => {
             style={{ paddingLeft: `${level * 12 + 12}px` }}
             onClick={handleClick}
             onContextMenu={(e) => {
-              // Ensure selection updates on right click
               setSelectedNode({ path: node.path, isDir: node.is_dir });
             }}
           >
@@ -281,7 +240,6 @@ const FileTreeNode = ({ node, onSelect, level = 0 }: FileTreeProps) => {
                 <span className="w-3.5" />
               )}
             </span>
-
             {node.is_dir ? (
               isOpen ? (
                 <FolderOpen size={16} className="text-blue-500 shrink-0" />
@@ -291,7 +249,6 @@ const FileTreeNode = ({ node, onSelect, level = 0 }: FileTreeProps) => {
             ) : (
               <FileCode size={16} className="text-yellow-500 shrink-0" />
             )}
-
             <span className="truncate">{node.name}</span>
           </div>
         </ContextMenuTrigger>
@@ -316,7 +273,6 @@ const FileTreeNode = ({ node, onSelect, level = 0 }: FileTreeProps) => {
               <ContextMenuSeparator className="bg-[#454545]" />
             </>
           )}
-
           {/* Common options */}
           <ContextMenuItem
             onClick={handleRevealInExplorer}
@@ -326,7 +282,6 @@ const FileTreeNode = ({ node, onSelect, level = 0 }: FileTreeProps) => {
             Reveal in File Explorer
           </ContextMenuItem>
           <ContextMenuSeparator className="bg-[#454545]" />
-
           <ContextMenuItem
             onClick={handleCopyPath}
             className="focus:bg-[#094771] focus:text-white cursor-pointer"
@@ -341,7 +296,6 @@ const FileTreeNode = ({ node, onSelect, level = 0 }: FileTreeProps) => {
             <Copy className="mr-2 h-4 w-4" />
             Copy Relative Path
           </ContextMenuItem>
-
           <ContextMenuSeparator className="bg-[#454545]" />
           <ContextMenuItem
             onClick={() => setIsRenameOpen(true)}
@@ -357,7 +311,6 @@ const FileTreeNode = ({ node, onSelect, level = 0 }: FileTreeProps) => {
             <Trash2 className="mr-2 h-4 w-4" />
             Delete
           </ContextMenuItem>
-
           {node.is_dir && (
             <>
               <ContextMenuSeparator className="bg-[#454545]" />
@@ -385,7 +338,6 @@ const FileTreeNode = ({ node, onSelect, level = 0 }: FileTreeProps) => {
           )}
         </ContextMenuContent>
       </ContextMenu>
-
       {/* Rename Dialog */}
       <Dialog open={isRenameOpen} onOpenChange={setIsRenameOpen}>
         <DialogContent className="sm:max-w-[425px] bg-[#252526] text-white border-[#454545]">
@@ -420,7 +372,6 @@ const FileTreeNode = ({ node, onSelect, level = 0 }: FileTreeProps) => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
       {/* Delete Dialog */}
       <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
         <DialogContent className="sm:max-w-[425px] bg-[#252526] text-white border-[#454545]">
@@ -446,7 +397,6 @@ const FileTreeNode = ({ node, onSelect, level = 0 }: FileTreeProps) => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
       {/* Children & Creation Input */}
       {isOpen && (
         <div className="">
@@ -480,7 +430,6 @@ const FileTreeNode = ({ node, onSelect, level = 0 }: FileTreeProps) => {
               </form>
             </div>
           )}
-
           {children.map((child) => (
             <FileTreeNode
               key={child.path}
@@ -494,5 +443,4 @@ const FileTreeNode = ({ node, onSelect, level = 0 }: FileTreeProps) => {
     </div>
   );
 };
-
 export default FileTreeNode;

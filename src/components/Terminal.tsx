@@ -2,16 +2,13 @@ import { useEffect, useRef } from "react";
 import { useEditorStore } from "../lib/store";
 import { X, Trash2 } from "lucide-react";
 import { Button } from "./ui/button";
-
 export default function Terminal() {
   const { terminalOutput, clearTerminalOutput, setTerminalOpen } =
     useEditorStore();
   const endRef = useRef<HTMLDivElement>(null);
-
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [terminalOutput]);
-
   return (
     <div className="h-48 bg-[#1e1e1e] border-t border-[#333] flex flex-col">
       <div className="flex items-center justify-between px-4 py-2 bg-[#252526] border-b border-[#333]">

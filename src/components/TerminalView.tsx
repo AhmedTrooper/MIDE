@@ -5,25 +5,22 @@ import {
   Plus,
   Trash2,
   Copy,
-  Settings,
   SplitSquareHorizontal,
   ChevronDown,
   Terminal as TerminalIcon,
   Play,
-  RefreshCw,
   Check,
+  RefreshCw,
 } from "lucide-react";
 import { Button } from "./ui/button";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import XtermTerminal from "./ui/XtermTerminal";
 import type { XtermTerminalHandle } from "./ui/XtermTerminal";
-
 interface VirtualEnv {
   path: string;
   type: "venv" | "virtualenv" | "conda";
 }
-
 export default function TerminalView() {
   const {
     terminals,
@@ -32,109 +29,68 @@ export default function TerminalView() {
     addTerminal,
     removeTerminal,
     setActiveTerminal,
-    appendToTerminal,
-    clearTerminal,
-    updateTerminalCwd,
     activateVenvInTerminal,
     setTerminalRunning,
   } = useEditorStore();
-
   const [detectedVenvs, setDetectedVenvs] = useState<VirtualEnv[]>([]);
   const [showVenvMenu, setShowVenvMenu] = useState(false);
-
-  // Refs to access xterm instances
   const terminalRefs = useRef<{ [key: string]: XtermTerminalHandle | null }>(
     {}
   );
-  const listenersRef = useRef<Set<string>>(new Set());
-
+  const initializedRefs = useRef<Set<string>>(new Set());
   const activeTerminal = terminals.find((t) => t.id === activeTerminalId);
-
-  // Detect virtual environments when terminal opens
   useEffect(() => {
     if (projectPath && terminals.length > 0) {
       detectVirtualEnvironments();
     }
   }, [projectPath, terminals.length]);
-
-  // Listen for command output from ALL terminals
   useEffect(() => {
-    const unlisteners: (() => void)[] = [];
-
-    const setupListeners = async () => {
+    const manageTerminals = async () => {
       for (const terminal of terminals) {
-        if (listenersRef.current.has(terminal.id)) {
-          continue;
-        }
-
-        listenersRef.current.add(terminal.id);
-
-        // Listen for data
-        const unlistenData = await listen<string>(
-          `term-data-${terminal.id}`,
-          (event) => {
-            // Update store (for persistence/restoration)
-            appendToTerminal(terminal.id, event.payload);
+        if (!initializedRefs.current.has(terminal.id)) {
+          initializedRefs.current.add(terminal.id);
+          try {
+            // Note: If we reload the window, we might lose backend sessions if they aren't persisted.
+            await invoke("spawn_pty", {
+              id: terminal.id,
+              rows: 24, // Initial guess, will be resized
+              cols: 80,
+              cwd: terminal.cwd || projectPath || undefined,
+            });
             setTerminalRunning(terminal.id, true);
-
-            // Write to xterm
-            const term = terminalRefs.current[terminal.id];
-            if (term) {
-              term.writeln(event.payload);
-            }
+          } catch (err) {
+            console.error("Failed to spawn PTY:", err);
+            terminalRefs.current[terminal.id]?.writeln(`Failed to start terminal: ${err}`);
           }
-        );
-        unlisteners.push(unlistenData);
-
-        // Listen for exit
-        const unlistenExit = await listen<number | null>(
-          `term-exit-${terminal.id}`,
-          (event) => {
-            const exitCode = event.payload;
-
-            // Only show exit code if non-zero (error)
-            let msg = "$ ";
-            if (exitCode !== 0) {
-              msg = `\r\nProcess exited with code: ${exitCode}\r\n$ `;
-            }
-
-            appendToTerminal(terminal.id, msg);
-            setTerminalRunning(terminal.id, false);
-
-            const term = terminalRefs.current[terminal.id];
-            if (term) {
-              term.write(msg);
-            }
-          }
-        );
-        unlisteners.push(unlistenExit);
-
-        // Listen for errors
-        const unlistenError = await listen<string>(
-          `term-error-${terminal.id}`,
-          (event) => {
-            const msg = `\r\nError: ${event.payload}\r\n$ `;
-            appendToTerminal(terminal.id, msg);
-            setTerminalRunning(terminal.id, false);
-
-            const term = terminalRefs.current[terminal.id];
-            if (term) {
-              term.write(msg);
-            }
-          }
-        );
-        unlisteners.push(unlistenError);
+        }
       }
     };
-
-    setupListeners();
-
-    return () => {
-      unlisteners.forEach((fn) => fn());
-      listenersRef.current.clear();
+    manageTerminals();
+  }, [terminals, projectPath]);
+  const listenersRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    const unlisteners: (() => void)[] = [];
+    const setupListeners = async () => {
+      for (const terminal of terminals) {
+        if (listenersRef.current.has(terminal.id)) continue;
+        listenersRef.current.add(terminal.id);
+        const unlistenData = await listen<string>(`term-data-${terminal.id}`, (event) => {
+          terminalRefs.current[terminal.id]?.write(event.payload);
+        });
+        unlisteners.push(unlistenData);
+        const unlistenExit = await listen<number | null>(`term-exit-${terminal.id}`, (event) => {
+          terminalRefs.current[terminal.id]?.writeln(`\r\nProcess exited with code ${event.payload}`);
+          setTerminalRunning(terminal.id, false);
+        });
+        unlisteners.push(unlistenExit);
+      }
     };
-  }, [terminals.length]);
-
+    setupListeners();
+    return () => {
+      unlisteners.forEach(u => u());
+      // Note: we don't clear listenersRef here to assume persistence.
+    };
+  }, [terminals]);
   const detectVirtualEnvironments = async () => {
     if (!projectPath) return;
     try {
@@ -142,164 +98,60 @@ export default function TerminalView() {
         projectPath,
       });
       setDetectedVenvs(venvs);
-      if (
-        venvs.length === 1 &&
-        activeTerminalId &&
-        activeTerminal &&
-        !activeTerminal.venvActivated
-      ) {
-        activateVirtualEnvironment(venvs[0]);
-      }
     } catch (err) {
       console.error("Failed to detect virtual environments:", err);
     }
   };
-
   const activateVirtualEnvironment = async (venv: VirtualEnv) => {
-    if (!activeTerminalId || !activeTerminal) return;
-    const activationScript = getActivationScript(venv);
-    // We just execute it as a command
-    executeCommand(activeTerminalId, activationScript);
-    activateVenvInTerminal(activeTerminalId, venv.path);
-    setShowVenvMenu(false);
-  };
-
-  const getActivationScript = (venv: VirtualEnv): string => {
+    if (!activeTerminalId) return;
+    let script = "";
     if (venv.type === "conda") {
-      return `conda activate ${venv.path}`;
-    }
-    const isWindows = navigator.platform.toLowerCase().includes("win");
-    if (isWindows) {
-      return `${venv.path}\\Scripts\\activate.bat`;
-    }
-    return `source ${venv.path}/bin/activate`;
-  };
-
-  const executeCommand = async (terminalId: string, cmd: string) => {
-    const terminal = terminals.find((t) => t.id === terminalId);
-    if (!terminal) return;
-
-    // Parse command and args
-    const parts = cmd.trim().split(/\s+/);
-    const mainCmd = parts[0];
-    const args = parts.slice(1);
-
-    // Handle special commands
-    if (mainCmd === "clear" || mainCmd === "cls") {
-      clearTerminal(terminalId);
-      terminalRefs.current[terminalId]?.clear();
-      terminalRefs.current[terminalId]?.write("$ ");
-      return;
-    } else if (mainCmd === "exit") {
-      handleCloseTerminal(terminalId);
-      return;
-    } else if (mainCmd === "cd") {
-      // Handle cd specially to update cwd
-      if (args.length > 0) {
-        const newPath = args[0];
-        // We need to resolve this path relative to current cwd
-        // Since we don't have path.resolve in browser, we'll rely on backend or simple logic
-        // For now, let's just update the store and let the next command fail if invalid
-        // Ideally we should verify it exists via backend
-
-        // Simple heuristic for now:
-        let nextCwd = terminal.cwd;
-        if (newPath === "..") {
-          // Go up one level
-          const parts = nextCwd.split(/[/\\]/);
-          parts.pop();
-          nextCwd = parts.join("/") || "/";
-        } else if (newPath.startsWith("/") || newPath.match(/^[a-zA-Z]:/)) {
-          nextCwd = newPath;
-        } else {
-          // Relative path
-          const sep =
-            nextCwd.endsWith("/") || nextCwd.endsWith("\\") ? "" : "/";
-          nextCwd = `${nextCwd}${sep}${newPath}`;
-        }
-
-        updateTerminalCwd(terminalId, nextCwd);
-
-        // Silent update - just new prompt
-        const msg = `$ `;
-        appendToTerminal(terminalId, msg);
-        terminalRefs.current[terminalId]?.write(msg);
-        return;
+      script = `conda activate ${venv.path}`;
+    } else {
+      const isWindows = navigator.platform.toLowerCase().includes("win");
+      if (isWindows) {
+        script = `${venv.path}\\Scripts\\activate.bat`;
+      } else {
+        script = `source "${venv.path}/bin/activate"`;
       }
     }
-
     try {
-      let finalCmd = mainCmd;
-      let finalArgs = args;
-      const cwd = terminal.cwd;
-
-      if (terminal.venvActivated && terminal.venvPath) {
-        if (
-          mainCmd === "python" ||
-          mainCmd === "python3" ||
-          mainCmd === "pip"
-        ) {
-          const isWindows = navigator.platform.toLowerCase().includes("win");
-          const pythonPath = isWindows
-            ? `${terminal.venvPath}\\Scripts\\${mainCmd}.exe`
-            : `${terminal.venvPath}/bin/${mainCmd}`;
-          finalCmd = pythonPath;
-        }
-      }
-
-      setTerminalRunning(terminalId, true);
-      // No need to write newline here, XtermTerminal handles it on Enter
-
-      invoke("run_command", {
-        id: terminalId,
-        command: finalCmd,
-        args: finalArgs,
-        cwd: cwd,
-      }).catch((err) => {
-        const msg = `\r\nError executing command: ${
-          err instanceof Error ? err.message : String(err)
-        }\r\n$ `;
-        appendToTerminal(terminalId, msg);
-        terminalRefs.current[terminalId]?.write(msg);
-        setTerminalRunning(terminalId, false);
-      });
-    } catch (err) {
-      // ...
+      await invoke("write_pty", { id: activeTerminalId, data: `${script}\r` });
+      activateVenvInTerminal(activeTerminalId, venv.path);
+      setShowVenvMenu(false);
+    } catch (e) {
+      console.error(e);
     }
   };
-
   const handleNewTerminal = () => {
     addTerminal(projectPath || undefined);
   };
-
   const handleCloseTerminal = async (id: string) => {
-    try {
-      await invoke("kill_terminal_process", { id });
-    } catch (err) {
-      console.error("Failed to kill terminal process:", err);
-    }
     removeTerminal(id);
+    if (terminalRefs.current[id]) {
+      delete terminalRefs.current[id];
+    }
+    if (initializedRefs.current.has(id)) {
+      initializedRefs.current.delete(id);
+    }
+    if (listenersRef.current.has(id)) {
+      listenersRef.current.delete(id);
+    }
   };
-
   const handleClearTerminal = () => {
     if (activeTerminalId) {
-      clearTerminal(activeTerminalId);
       terminalRefs.current[activeTerminalId]?.clear();
-      terminalRefs.current[activeTerminalId]?.write("$ ");
     }
   };
-
-  const handleCopyOutput = () => {
-    if (activeTerminal) {
-      const text = activeTerminal.output.join("\n");
-      navigator.clipboard.writeText(text);
-    }
-  };
-
   const handleSplitTerminal = () => {
     addTerminal(activeTerminal?.cwd || projectPath || undefined);
   };
-
+  const handleResize = (id: string, rows: number, cols: number) => {
+    invoke("resize_pty", { id, rows, cols }).catch(console.error);
+  };
+  const handleData = (id: string, data: string) => {
+    invoke("write_pty", { id, data }).catch(console.error);
+  };
   return (
     <div className="h-full flex flex-col bg-[#1e1e1e]">
       {terminals.length > 0 ? (
@@ -359,7 +211,6 @@ export default function TerminalView() {
               <Plus size={16} />
             </Button>
           </div>
-
           {/* Terminal Toolbar */}
           <div className="flex items-center justify-between px-3 py-1.5 bg-[#252526] border-b border-[#333]">
             <div className="flex items-center gap-1">
@@ -424,7 +275,8 @@ export default function TerminalView() {
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={handleCopyOutput}
+                onClick={() => {
+                }}
                 className="h-6 w-6 p-1 hover:bg-[#333] rounded text-gray-400 hover:text-white"
                 title="Copy Output"
               >
@@ -439,40 +291,25 @@ export default function TerminalView() {
               >
                 <Trash2 size={14} />
               </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6 p-1 hover:bg-[#333] rounded text-gray-400 hover:text-white"
-                title="Settings"
-              >
-                <Settings size={14} />
-              </Button>
             </div>
           </div>
-
-          {/* Terminal Output Area - Render ALL terminals but hide inactive ones */}
+          {/* Terminal Output Area */}
           <div className="flex-1 bg-[#1e1e1e] relative min-h-0">
-            {terminals.map((terminal) => (
-              <div
-                key={terminal.id}
-                className={`absolute inset-0 ${
-                  terminal.id === activeTerminalId ? "z-10" : "z-0 invisible"
-                }`}
-              >
-                <XtermTerminal
-                  id={terminal.id}
-                  ref={(el) => {
-                    terminalRefs.current[terminal.id] = el;
-                  }}
-                  onCommand={(cmd) => executeCommand(terminal.id, cmd)}
-                  initialContent={terminal.output.join("\r\n")}
-                />
-              </div>
-            ))}
+            {activeTerminalId && (
+              <XtermTerminal
+                id={activeTerminalId}
+                ref={(el) => {
+                  if (activeTerminalId) {
+                    terminalRefs.current[activeTerminalId] = el;
+                  }
+                }}
+                onData={(data) => handleData(activeTerminalId, data)}
+                onResize={(rows, cols) => handleResize(activeTerminalId, rows, cols)}
+              />
+            )}
           </div>
         </>
       ) : (
-        /* Empty State */
         <div className="flex-1 flex items-center justify-center text-gray-500">
           <div className="text-center">
             <TerminalIcon size={64} className="mx-auto mb-4 opacity-30" />
