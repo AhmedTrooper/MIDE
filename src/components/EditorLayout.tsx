@@ -33,6 +33,8 @@ export default function EditorLayout() {
     splitEditorVertical,
     splitDirection,
     updateFileContent,
+    isBottomPanelVisible,
+    toggleBottomPanel,
   } = useEditorStore();
   const activeFileObj = openFiles.find((f) => f.path === activeFile);
   const handleFileSelect = async (path: string) => {
@@ -101,6 +103,10 @@ export default function EditorLayout() {
           splitEditorVertical();
         }
       }
+      if ((e.ctrlKey || e.metaKey) && e.key === "`") {
+        e.preventDefault();
+        toggleBottomPanel();
+      }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
@@ -136,7 +142,6 @@ export default function EditorLayout() {
             {activeView === "search" && <SearchView />}
             {activeView === "git" && <GitView />}
             {activeView === "todos" && <TodoView />}
-            {activeView === "terminal" && <TerminalView />}
             {activeView === "extensions" && <PluginManagerView />}
           </ResizablePanel>
         )}
@@ -169,7 +174,20 @@ export default function EditorLayout() {
                   </Button>
                 </div>
               )}
-              <SplitEditorLayout />
+              <div className="flex-1 min-h-0 relative">
+                <SplitEditorLayout />
+              </div>
+              {isBottomPanelVisible && (
+                <ResizablePanel
+                  direction="vertical"
+                  defaultSize={300}
+                  minSize={100}
+                  maxSize={800}
+                  className="border-t border-[#3e3e3e]"
+                >
+                  <TerminalView />
+                </ResizablePanel>
+              )}
             </>
           )}
         </div>

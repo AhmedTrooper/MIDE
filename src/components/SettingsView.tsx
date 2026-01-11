@@ -1,5 +1,5 @@
 import { useSettingsStore } from "../lib/settingsStore";
-import { Check, ChevronDown } from "lucide-react";
+// import { ChevronDown } from "lucide-react";
 import { Input } from "./ui/input";
 import { Checkbox } from "./ui/checkbox";
 import {

@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { invoke } from "@tauri-apps/api/core";
 import { homeDir, join } from '@tauri-apps/api/path';
-import { exists, mkdir, BaseDirectory } from '@tauri-apps/plugin-fs';
+// import { exists, mkdir, BaseDirectory } from '@tauri-apps/plugin-fs';
 import { useEditorStore } from './store';
 type EventCallback = (...args: any[]) => void;
 class PluginEventEmitter {

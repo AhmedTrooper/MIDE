@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { invoke } from "@tauri-apps/api/core";
-import { listen } from "@tauri-apps/api/event";
+// import { invoke } from "@tauri-apps/api/core";
+// import { listen } from "@tauri-apps/api/event";
 import {
   Minus,
   Square,
@@ -17,7 +17,7 @@ import { Button } from "./ui/button";
 import { cn } from "../lib/utils";
 import AdbWidget from "./AdbWidget";
 export default function TitleBar() {
-  const [isMaximized, setIsMaximized] = useState(false);
+  // const [isMaximized, setIsMaximized] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [activeMenuDropdown, setActiveMenuDropdown] = useState<string | null>(
     null
@@ -34,14 +34,14 @@ export default function TitleBar() {
   } = useEditorStore();
   const appWindow = getCurrentWindow();
   useEffect(() => {
-    const checkMaximized = async () => {
-      setIsMaximized(await appWindow.isMaximized());
-    };
-    checkMaximized();
-    const unlisten = appWindow.listen("tauri://resize", checkMaximized);
-    return () => {
-      unlisten.then((f) => f());
-    };
+    // const checkMaximized = async () => {
+    //   setIsMaximized(await appWindow.isMaximized());
+    // };
+    // checkMaximized();
+    // const unlisten = appWindow.listen("tauri://resize", checkMaximized);
+    // return () => {
+    //   unlisten.then((f) => f());
+    // };
   }, []);
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -87,10 +87,10 @@ export default function TitleBar() {
     const max = await appWindow.isMaximized();
     if (max) {
       appWindow.unmaximize();
-      setIsMaximized(false);
+      // setIsMaximized(false);
     } else {
       appWindow.maximize();
-      setIsMaximized(true);
+      // setIsMaximized(true);
     }
   };
   const close = () => appWindow.close();

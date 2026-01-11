@@ -58,9 +58,8 @@ export default function ResizablePanel({
                 onMouseDown={handleMouseDown}
                 className={`absolute ${direction === "horizontal"
                         ? "right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-500/50"
-                        : "bottom-0 left-0 right-0 h-1 cursor-row-resize hover:bg-blue-500/50"
+                        : "top-0 left-0 right-0 h-1 cursor-row-resize hover:bg-blue-500/50"
                     } ${isResizing ? "bg-blue-500" : "bg-transparent"} transition-colors z-10`}
-            />
-        </div>
+            />      </div>
     );
 }

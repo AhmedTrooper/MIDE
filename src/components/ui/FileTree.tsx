@@ -217,15 +217,14 @@ const FileTreeNode = ({ node, onSelect, level = 0 }: FileTreeProps) => {
           <div
             className={`
             flex items-center gap-1.5 py-1 px-2 cursor-pointer transition-colors
-            ${
-              isSelected
+            ${isSelected
                 ? "bg-[#37373d] text-white"
                 : "text-gray-400 hover:bg-[#2a2d2e] hover:text-white"
-            }
+              }
         `}
             style={{ paddingLeft: `${level * 12 + 12}px` }}
             onClick={handleClick}
-            onContextMenu={(e) => {
+            onContextMenu={(_e) => {
               setSelectedNode({ path: node.path, isDir: node.is_dir });
             }}
           >

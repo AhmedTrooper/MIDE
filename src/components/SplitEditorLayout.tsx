@@ -38,7 +38,7 @@ function EditorPane({ groupId }: EditorPaneProps) {
     setFindWidgetOpen,
   } = useEditorStore();
   const editorRef = useRef<CodeEditorHandle>(null);
-  const [matchCount, setMatchCount] = useState<{
+  const [matchCount] = useState<{
     current: number;
     total: number;
   }>();
@@ -134,9 +134,8 @@ function EditorPane({ groupId }: EditorPaneProps) {
   };
   return (
     <div
-      className={`flex flex-col h-full bg-[#1e1e1e] border-2 transition-colors ${
-        isActive ? "border-blue-500/50" : "border-transparent"
-      }`}
+      className={`flex flex-col h-full bg-[#1e1e1e] border-2 transition-colors ${isActive ? "border-blue-500/50" : "border-transparent"
+        }`}
       onClick={() => setActiveGroup(groupId)}
     >
       {/* Tabs */}
@@ -155,11 +154,10 @@ function EditorPane({ groupId }: EditorPaneProps) {
               }}
               className={`
               group flex items-center gap-2 px-3 text-sm cursor-pointer border-r border-[#1e1e1e] min-w-[120px] max-w-[200px] select-none
-              ${
-                group?.activeFile === file.path
+              ${group?.activeFile === file.path
                   ? "bg-[#1e1e1e] text-white border-t-2 border-t-blue-500"
                   : "bg-[#2d2d2d] text-gray-400 hover:bg-[#2a2d2e]"
-              }
+                }
             `}
             >
               <span className="truncate flex-1">{file.name}</span>
@@ -193,11 +191,10 @@ function EditorPane({ groupId }: EditorPaneProps) {
                 handleSave();
               }}
               disabled={!activeFileObj.isDirty}
-              className={`h-7 px-3 flex items-center gap-2 text-xs transition-colors ${
-                activeFileObj.isDirty
+              className={`h-7 px-3 flex items-center gap-2 text-xs transition-colors ${activeFileObj.isDirty
                   ? "text-white hover:bg-[#094771] hover:text-white"
                   : "text-gray-600 cursor-not-allowed"
-              }`}
+                }`}
               title={
                 activeFileObj.isDirty ? "Save (Ctrl+S)" : "No changes to save"
               }

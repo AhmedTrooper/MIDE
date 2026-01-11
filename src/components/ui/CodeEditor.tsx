@@ -1,10 +1,9 @@
 import Editor, { type OnMount, loader } from "@monaco-editor/react";
 import { useSettingsStore } from "../../lib/settingsStore";
 import {
-  useRef,
   useImperativeHandle,
   forwardRef,
-  useEffect,
+  useRef,
   useState,
   memo,
 } from "react";
@@ -247,11 +246,11 @@ const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(
             showFoldingControls: "mouseover", // Only show when needed
             matchBrackets: "always",
             renderLineHighlight: "line",
-            occurrencesHighlight: false, // Disable to improve performance
+            // occurrencesHighlight: false, // Disable to improve performance
             selectionHighlight: false, // Disable to improve performance
             codeLens: false, // Disable code lens for performance
             lightbulb: {
-              enabled: false, // Disable lightbulb for performance
+              // enabled: false, // Disable lightbulb for performance
             },
           }}
         />

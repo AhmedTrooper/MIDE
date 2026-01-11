@@ -1,26 +1,26 @@
 import { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { useEditorStore } from "../lib/store";
+
 import {
+  GitBranch as GitBranchIcon,
   RefreshCw,
-  GitCommit,
-  GitBranch,
-  GitPullRequest,
-  GitMerge,
-  Plus,
-  Minus,
-  RotateCcw,
-  Upload,
-  Download,
-  History,
-  FolderGit,
-  ChevronDown,
-  ChevronRight,
   MoreHorizontal,
+  Plus,
   Check,
   X,
-  Archive,
+  ChevronRight,
+  ChevronDown,
+  GitCommit,
+  Upload,
+  Download,
+  FolderGit,
+  GitPullRequest,
   FileText,
+  Archive,
+  RotateCcw,
+  Minus,
+  History as HistoryIcon
 } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -49,33 +49,7 @@ import {
   SelectValue,
 } from "./ui/select";
 import GitDiffView from "./GitDiffView";
-interface GitFile {
-  status: string;
-  path: string;
-}
-interface GitStatus {
-  branch: string;
-  files: GitFile[];
-  ahead: number;
-  behind: number;
-}
-interface GitBranch {
-  name: string;
-  current: boolean;
-  remote: string;
-}
-interface GitCommitInfo {
-  hash: string;
-  author: string;
-  email: string;
-  timestamp: number;
-  message: string;
-  body: string;
-}
-interface GitRemote {
-  name: string;
-  url: string;
-}
+
 type ViewMode =
   | "changes"
   | "history"
@@ -85,16 +59,33 @@ type ViewMode =
   | "issues"
   | "actions"
   | "releases";
+
 export default function GitView() {
-  const { projectPath } = useEditorStore();
-  const [status, setStatus] = useState<GitStatus | null>(null);
-  const [branches, setBranches] = useState<GitBranch[]>([]);
-  const [commits, setCommits] = useState<GitCommitInfo[]>([]);
-  const [remotes, setRemotes] = useState<GitRemote[]>([]);
-  const [stashes, setStashes] = useState<string[]>([]);
-  const [tags, setTags] = useState<string[]>([]);
+  const {
+    projectPath,
+    gitStatus: status,
+    gitBranches: branches,
+    gitCommits: commits,
+    gitRemotes: remotes,
+    isGitLoading,
+    checkIfGitRepo: checkGitRepoStore,
+    refreshGitStatus,
+    refreshGitBranches,
+    refreshGitCommits,
+    refreshGitRemotes,
+    stageFile,
+    unstageFile,
+    commitChanges,
+    pushChanges,
+    pullChanges,
+    switchBranch,
+    createBranch: createBranchStore,
+    fetchChanges,
+    amendCommit
+  } = useEditorStore();
+
   const [commitMessage, setCommitMessage] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  const isLoading = isGitLoading;
   const [error, setError] = useState<string | null>(null);
   const [isGitRepo, setIsGitRepo] = useState<boolean | null>(null);
   const [userName, setUserName] = useState("");
@@ -104,7 +95,7 @@ export default function GitView() {
   const [showConfigDialog, setShowConfigDialog] = useState(false);
   const [newRemoteName, setNewRemoteName] = useState("origin");
   const [newRemoteUrl, setNewRemoteUrl] = useState("");
-  const [editingRemote, setEditingRemote] = useState<GitRemote | null>(null);
+  // const [editingRemote, setEditingRemote] = useState<GitRemote | null>(null);
   const [syncBranch, setSyncBranch] = useState("");
   const [syncRemote, setSyncRemote] = useState("origin");
   const [viewMode, setViewMode] = useState<ViewMode>("changes");
@@ -120,8 +111,8 @@ export default function GitView() {
   });
   const [newBranchName, setNewBranchName] = useState("");
   const [showBranchInput, setShowBranchInput] = useState(false);
-  const [newTagName, setNewTagName] = useState("");
-  const [showTagInput, setShowTagInput] = useState(false);
+  // const [newTagName, setNewTagName] = useState("");
+  // const [showTagInput, setShowTagInput] = useState(false);
   const [diffView, setDiffView] = useState<{
     file: string;
     staged: boolean;
@@ -148,12 +139,11 @@ export default function GitView() {
   const checkIfGitRepo = async () => {
     if (!projectPath) return;
     try {
-      await invokeWithFallback<GitStatus>(
-        ["git_status_full", "git::git_status_full"],
-        { cwd: projectPath }
-      );
-      setIsGitRepo(true);
-      await loadGitConfig();
+      const isRepo = await checkGitRepoStore();
+      setIsGitRepo(isRepo);
+      if (isRepo) {
+        await loadGitConfig();
+      }
     } catch (err) {
       setIsGitRepo(false);
     }
@@ -181,7 +171,6 @@ export default function GitView() {
   };
   const handleInitGit = async () => {
     if (!projectPath) return;
-    setIsLoading(true);
     try {
       await invokeWithFallback<void>(["git_init", "git::git_init"], {
         cwd: projectPath,
@@ -192,13 +181,10 @@ export default function GitView() {
       setError(null);
     } catch (err) {
       setError(`Failed to initialize Git: ${err}`);
-    } finally {
-      setIsLoading(false);
     }
   };
   const handleSaveConfig = async () => {
     if (!projectPath) return;
-    setIsLoading(true);
     try {
       if (userName) {
         await invokeWithFallback<void>(
@@ -216,13 +202,10 @@ export default function GitView() {
       setError(null);
     } catch (err) {
       setError(`Failed to save config: ${err}`);
-    } finally {
-      setIsLoading(false);
     }
   };
   const handleAddRemote = async () => {
     if (!projectPath || !newRemoteName || !newRemoteUrl) return;
-    setIsLoading(true);
     try {
       await invokeWithFallback<void>(
         ["git_add_remote", "git::git_add_remote"],
@@ -235,13 +218,10 @@ export default function GitView() {
       setError(null);
     } catch (err) {
       setError(`Failed to add remote: ${err}`);
-    } finally {
-      setIsLoading(false);
     }
   };
   const handleRemoveRemote = async (name: string) => {
     if (!projectPath || !confirm(`Remove remote '${name}'?`)) return;
-    setIsLoading(true);
     try {
       await invokeWithFallback<void>(
         ["git_remove_remote", "git::git_remove_remote"],
@@ -251,13 +231,10 @@ export default function GitView() {
       setError(null);
     } catch (err) {
       setError(`Failed to remove remote: ${err}`);
-    } finally {
-      setIsLoading(false);
     }
   };
   const handleSyncFromRemote = async () => {
     if (!projectPath || !syncRemote || !syncBranch) return;
-    setIsLoading(true);
     try {
       await invokeWithFallback<string>(["git_fetch", "git::git_fetch"], {
         cwd: projectPath,
@@ -270,35 +247,22 @@ export default function GitView() {
       setError(null);
     } catch (err) {
       setError(`Failed to sync: ${err}`);
-    } finally {
-      setIsLoading(false);
     }
   };
   const fetchStatus = async () => {
     if (!projectPath) return;
-    setIsLoading(true);
     setError(null);
     try {
-      const gitStatus = await invokeWithFallback<GitStatus>(
-        ["git_status_full", "git::git_status_full"],
-        { cwd: projectPath }
-      );
-      setStatus(gitStatus);
-    } catch (err) {
+      await refreshGitStatus();
+    } catch (err: any) {
       console.error("Git status error:", err);
-      setError(`Git Error: ${err}`);
-    } finally {
-      setIsLoading(false);
+      setError(`Git Error: ${err.message || err}`);
     }
   };
   const fetchBranches = async () => {
     if (!projectPath) return;
     try {
-      const branchList = await invokeWithFallback<GitBranch[]>(
-        ["git_branches", "git::git_branches"],
-        { cwd: projectPath }
-      );
-      setBranches(branchList);
+      await refreshGitBranches();
     } catch (err) {
       console.error("Branches error:", err);
     }
@@ -306,11 +270,7 @@ export default function GitView() {
   const fetchCommits = async () => {
     if (!projectPath) return;
     try {
-      const commitList = await invokeWithFallback<GitCommitInfo[]>(
-        ["git_log", "git::git_log"],
-        { cwd: projectPath, limit: 50 }
-      );
-      setCommits(commitList);
+      await refreshGitCommits();
     } catch (err) {
       console.error("Log error:", err);
     }
@@ -318,11 +278,7 @@ export default function GitView() {
   const fetchRemotes = async () => {
     if (!projectPath) return;
     try {
-      const remoteList = await invokeWithFallback<GitRemote[]>(
-        ["git_remotes", "git::git_remotes"],
-        { cwd: projectPath }
-      );
-      setRemotes(remoteList);
+      await refreshGitRemotes();
     } catch (err) {
       console.error("Remotes error:", err);
     }
@@ -330,11 +286,7 @@ export default function GitView() {
   const handleStageFile = async (file: string) => {
     if (!projectPath) return;
     try {
-      await invokeWithFallback<void>(["git_add", "git::git_add"], {
-        cwd: projectPath,
-        files: [file],
-      });
-      await fetchStatus();
+      await stageFile(file);
     } catch (err) {
       setError(`Failed to stage: ${err}`);
     }
@@ -342,11 +294,7 @@ export default function GitView() {
   const handleUnstageFile = async (file: string) => {
     if (!projectPath) return;
     try {
-      await invokeWithFallback<void>(["git_unstage", "git::git_unstage"], {
-        cwd: projectPath,
-        files: [file],
-      });
-      await fetchStatus();
+      await unstageFile(file);
     } catch (err) {
       setError(`Failed to unstage: ${err}`);
     }
@@ -358,7 +306,7 @@ export default function GitView() {
         cwd: projectPath,
         files: [file],
       });
-      await fetchStatus();
+      await refreshGitStatus();
     } catch (err) {
       setError(`Failed to discard: ${err}`);
     }
@@ -366,11 +314,7 @@ export default function GitView() {
   const handleStageAll = async () => {
     if (!projectPath) return;
     try {
-      await invokeWithFallback<void>(["git_add", "git::git_add"], {
-        cwd: projectPath,
-        files: ["."],
-      });
-      await fetchStatus();
+      await stageFile(".");
     } catch (err) {
       setError(`Failed to stage all: ${err}`);
     }
@@ -378,195 +322,105 @@ export default function GitView() {
   const handleUnstageAll = async () => {
     if (!projectPath) return;
     try {
-      await invokeWithFallback<void>(["git_unstage", "git::git_unstage"], {
-        cwd: projectPath,
-        files: ["."],
-      });
-      await fetchStatus();
+      await unstageFile(".");
     } catch (err) {
       setError(`Failed to unstage all: ${err}`);
     }
   };
   const handleCommit = async () => {
     if (!projectPath || !commitMessage) return;
-    setIsLoading(true);
     try {
-      await invokeWithFallback<string>(["git_commit", "git::git_commit"], {
-        cwd: projectPath,
-        message: commitMessage,
-      });
+      await commitChanges(commitMessage);
       setCommitMessage("");
-      await fetchStatus();
-      if (viewMode === "history") await fetchCommits();
     } catch (err) {
       console.error("Commit error:", err);
       setError(`Commit failed: ${err}`);
-    } finally {
-      setIsLoading(false);
     }
   };
   const handlePull = async () => {
     if (!projectPath) return;
-    setIsLoading(true);
     try {
-      await invokeWithFallback<string>(["git_pull", "git::git_pull"], {
-        cwd: projectPath,
-      });
-      await fetchStatus();
+      await pullChanges();
       setError(null);
     } catch (err) {
       setError(`Pull failed: ${err}`);
-    } finally {
-      setIsLoading(false);
     }
   };
   const handlePush = async () => {
     if (!projectPath || !status) return;
-    setIsLoading(true);
     try {
-      await invokeWithFallback<string>(["git_push", "git::git_push"], {
-        cwd: projectPath,
-        setUpstream: false,
-        branch: status.branch,
-      });
-      await fetchStatus();
+      await pushChanges();
       setError(null);
     } catch (err) {
       setError(`Push failed: ${err}`);
-    } finally {
-      setIsLoading(false);
     }
   };
   const handleCommitAndPush = async () => {
-    if (!projectPath || !commitMessage || stagedFiles.length === 0) return;
-    setIsLoading(true);
+    if (!projectPath || !commitMessage) return;
     try {
-      await invokeWithFallback<string>(["git_commit", "git::git_commit"], {
-        cwd: projectPath,
-        message: commitMessage,
-      });
+      await commitChanges(commitMessage);
       setCommitMessage("");
-      await invokeWithFallback<string>(["git_push", "git::git_push"], {
-        cwd: projectPath,
-        setUpstream: false,
-        branch: status?.branch || "main",
-      });
-      await fetchStatus();
-      if (viewMode === "history") await fetchCommits();
+      await pushChanges();
       setError(null);
     } catch (err) {
       console.error("Commit & Push error:", err);
       setError(`Commit & Push failed: ${err}`);
-    } finally {
-      setIsLoading(false);
     }
   };
   const handleCommitAndSync = async () => {
-    if (!projectPath || !commitMessage || stagedFiles.length === 0) return;
-    setIsLoading(true);
+    if (!projectPath || !commitMessage) return;
     try {
-      await invokeWithFallback<string>(["git_pull", "git::git_pull"], {
-        cwd: projectPath,
-      });
-      await invokeWithFallback<string>(["git_commit", "git::git_commit"], {
-        cwd: projectPath,
-        message: commitMessage,
-      });
+      await pullChanges();
+      await commitChanges(commitMessage);
       setCommitMessage("");
-      await invokeWithFallback<string>(["git_push", "git::git_push"], {
-        cwd: projectPath,
-        setUpstream: false,
-        branch: status?.branch || "main",
-      });
-      await fetchStatus();
-      if (viewMode === "history") await fetchCommits();
+      await pushChanges();
       setError(null);
     } catch (err) {
       console.error("Commit & Sync error:", err);
       setError(`Commit & Sync failed: ${err}`);
-    } finally {
-      setIsLoading(false);
     }
   };
   const handleAmendCommit = async () => {
     if (!projectPath || !commitMessage) return;
     if (!confirm("Amend the last commit? This will rewrite history.")) return;
-    setIsLoading(true);
     try {
-      await invokeWithFallback<string>(
-        ["git_commit_amend", "git::git_commit_amend"],
-        {
-          cwd: projectPath,
-          message: commitMessage,
-        }
-      );
+      await amendCommit(commitMessage);
       setCommitMessage("");
-      await fetchStatus();
-      if (viewMode === "history") await fetchCommits();
       setError(null);
     } catch (err) {
       console.error("Amend error:", err);
       setError(`Amend failed: ${err}`);
-    } finally {
-      setIsLoading(false);
     }
   };
   const handleStageAllAndCommit = async () => {
     if (!projectPath || !commitMessage) return;
-    setIsLoading(true);
     try {
-      await invokeWithFallback<void>(["git_add", "git::git_add"], {
-        cwd: projectPath,
-        files: ["."],
-      });
-      await invokeWithFallback<string>(["git_commit", "git::git_commit"], {
-        cwd: projectPath,
-        message: commitMessage,
-      });
+      await stageFile(".");
+      await commitChanges(commitMessage);
       setCommitMessage("");
-      await fetchStatus();
-      if (viewMode === "history") await fetchCommits();
       setError(null);
     } catch (err) {
       console.error("Stage All & Commit error:", err);
       setError(`Stage All & Commit failed: ${err}`);
-    } finally {
-      setIsLoading(false);
     }
   };
   const handleCreateBranch = async () => {
     if (!projectPath || !newBranchName) return;
     try {
-      await invokeWithFallback<void>(
-        ["git_create_branch", "git::git_create_branch"],
-        { cwd: projectPath, name: newBranchName }
-      );
-      await invokeWithFallback<void>(
-        ["git_checkout_branch", "git::git_checkout_branch"],
-        { cwd: projectPath, name: newBranchName }
-      );
+      await createBranchStore(newBranchName);
+      await switchBranch(newBranchName);
       setNewBranchName("");
       setShowBranchInput(false);
-      await fetchBranches();
-      await fetchStatus();
     } catch (err) {
       setError(`Failed to create branch: ${err}`);
     }
   };
   const handleCheckoutBranch = async (name: string) => {
     if (!projectPath) return;
-    setIsLoading(true);
     try {
-      await invokeWithFallback<void>(
-        ["git_checkout_branch", "git::git_checkout_branch"],
-        { cwd: projectPath, name }
-      );
-      await fetchBranches();
-      await fetchStatus();
+      await switchBranch(name);
     } catch (err) {
       setError(`Failed to checkout: ${err}`);
-    } finally {
-      setIsLoading(false);
     }
   };
   const handleDeleteBranch = async (name: string) => {
@@ -576,25 +430,18 @@ export default function GitView() {
         ["git_delete_branch", "git::git_delete_branch"],
         { cwd: projectPath, name, force: false }
       );
-      await fetchBranches();
+      await refreshGitBranches();
     } catch (err) {
       setError(`Failed to delete branch: ${err}`);
     }
   };
   const handleFetch = async () => {
     if (!projectPath) return;
-    setIsLoading(true);
     try {
-      await invokeWithFallback<string>(["git_fetch", "git::git_fetch"], {
-        cwd: projectPath,
-      });
-      await fetchStatus();
-      await fetchBranches();
+      await fetchChanges();
       setError(null);
     } catch (err) {
       setError(`Fetch failed: ${err}`);
-    } finally {
-      setIsLoading(false);
     }
   };
   useEffect(() => {
@@ -603,10 +450,10 @@ export default function GitView() {
     }
   }, [projectPath]);
   useEffect(() => {
-    if (isGitRepo && viewMode === "changes") fetchStatus();
-    else if (isGitRepo && viewMode === "history") fetchCommits();
-    else if (isGitRepo && viewMode === "branches") fetchBranches();
-    else if (isGitRepo && viewMode === "remotes") fetchRemotes();
+    if (isGitRepo && viewMode === "changes") refreshGitStatus();
+    else if (isGitRepo && viewMode === "history") refreshGitCommits();
+    else if (isGitRepo && viewMode === "branches") refreshGitBranches();
+    else if (isGitRepo && viewMode === "remotes") refreshGitRemotes();
     else if (viewMode === "pullrequests" && useGitHubCLI) fetchPullRequests();
     else if (viewMode === "issues" && useGitHubCLI) fetchIssues();
     else if (viewMode === "actions" && useGitHubCLI) fetchWorkflows();
@@ -639,7 +486,6 @@ export default function GitView() {
   };
   const fetchPullRequests = async () => {
     if (!projectPath) return;
-    setIsLoading(true);
     try {
       const result = await invoke<string>("gh_pr_list", {
         cwd: projectPath,
@@ -648,13 +494,10 @@ export default function GitView() {
       setPullRequests(JSON.parse(result));
     } catch (err) {
       setError(`Failed to fetch PRs: ${err}`);
-    } finally {
-      setIsLoading(false);
     }
   };
   const fetchIssues = async () => {
     if (!projectPath) return;
-    setIsLoading(true);
     try {
       const result = await invoke<string>("gh_issue_list", {
         cwd: projectPath,
@@ -663,13 +506,10 @@ export default function GitView() {
       setIssues(JSON.parse(result));
     } catch (err) {
       setError(`Failed to fetch issues: ${err}`);
-    } finally {
-      setIsLoading(false);
     }
   };
   const fetchWorkflows = async () => {
     if (!projectPath) return;
-    setIsLoading(true);
     try {
       const result = await invoke<string>("gh_workflow_list", {
         cwd: projectPath,
@@ -677,13 +517,10 @@ export default function GitView() {
       setWorkflows(JSON.parse(result));
     } catch (err) {
       setError(`Failed to fetch workflows: ${err}`);
-    } finally {
-      setIsLoading(false);
     }
   };
   const fetchReleases = async () => {
     if (!projectPath) return;
-    setIsLoading(true);
     try {
       const result = await invoke<string>("gh_release_list", {
         cwd: projectPath,
@@ -691,8 +528,6 @@ export default function GitView() {
       setReleases(JSON.parse(result));
     } catch (err) {
       setError(`Failed to fetch releases: ${err}`);
-    } finally {
-      setIsLoading(false);
     }
   };
   const handleCreatePR = async () => {
@@ -778,7 +613,7 @@ export default function GitView() {
             onClick={() => setShowInitDialog(true)}
             className="bg-blue-600 hover:bg-blue-700 mb-4"
           >
-            <GitBranch size={16} className="mr-2" />
+            <GitBranchIcon size={16} className="mr-2" />
             Initialize Repository
           </Button>
           <Button
@@ -848,7 +683,7 @@ export default function GitView() {
                   {isLoading ? (
                     <RefreshCw size={14} className="mr-2 animate-spin" />
                   ) : (
-                    <GitBranch size={14} className="mr-2" />
+                    <GitBranchIcon size={14} className="mr-2" />
                   )}
                   Initialize
                 </Button>
@@ -878,14 +713,13 @@ export default function GitView() {
             variant="ghost"
             size="icon"
             onClick={() => setUseGitHubCLI(!useGitHubCLI)}
-            className={`h-6 w-6 ${
-              useGitHubCLI
-                ? "text-white bg-[#3e3e42]"
-                : "text-gray-400 hover:text-white"
-            }`}
+            className={`h-6 w-6 ${useGitHubCLI
+              ? "text-white bg-[#3e3e42]"
+              : "text-gray-400 hover:text-white"
+              }`}
             title={useGitHubCLI ? "Switch to Git" : "Switch to GitHub CLI"}
           >
-            <GitBranch size={14} />
+            <GitBranchIcon size={14} />
           </Button>
           <Button
             variant="ghost"
@@ -939,7 +773,7 @@ export default function GitView() {
                 onClick={() => setShowConfigDialog(true)}
                 className="hover:bg-[#3e3e42]"
               >
-                <GitBranch size={14} className="mr-2" /> Configure User
+                <GitBranchIcon size={14} className="mr-2" /> Configure User
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -950,7 +784,7 @@ export default function GitView() {
         <div className="px-4 py-2 border-b border-[#333] bg-[#252526]">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <GitBranch size={14} className="text-gray-400" />
+              <GitBranchIcon size={16} className="text-gray-400" />
               <span className="text-xs text-gray-300">{status.branch}</span>
             </div>
             <div className="flex items-center gap-2">
@@ -974,41 +808,37 @@ export default function GitView() {
           <>
             <button
               onClick={() => setViewMode("changes")}
-              className={`px-4 py-3 text-xs font-medium whitespace-nowrap ${
-                viewMode === "changes"
-                  ? "text-white border-b-2 border-blue-500"
-                  : "text-gray-400 hover:text-white"
-              }`}
+              className={`px-4 py-3 text-xs font-medium whitespace-nowrap ${viewMode === "changes"
+                ? "text-white border-b-2 border-blue-500"
+                : "text-gray-400 hover:text-white"
+                }`}
             >
               <GitCommit size={12} className="inline mr-1" /> Changes
             </button>
             <button
               onClick={() => setViewMode("history")}
-              className={`px-4 py-3 text-xs font-medium whitespace-nowrap ${
-                viewMode === "history"
-                  ? "text-white border-b-2 border-blue-500"
-                  : "text-gray-400 hover:text-white"
-              }`}
+              className={`px-4 py-3 text-xs font-medium whitespace-nowrap ${viewMode === "history"
+                ? "text-white border-b-2 border-blue-500"
+                : "text-gray-400 hover:text-white"
+                }`}
             >
-              <History size={12} className="inline mr-1" /> History
+              <HistoryIcon size={12} className="inline mr-1" /> History
             </button>
             <button
               onClick={() => setViewMode("branches")}
-              className={`px-4 py-3 text-xs font-medium whitespace-nowrap ${
-                viewMode === "branches"
-                  ? "text-white border-b-2 border-blue-500"
-                  : "text-gray-400 hover:text-white"
-              }`}
+              className={`px-4 py-3 text-xs font-medium whitespace-nowrap ${viewMode === "branches"
+                ? "text-white border-b-2 border-blue-500"
+                : "text-gray-400 hover:text-white"
+                }`}
             >
-              <GitBranch size={12} className="inline mr-1" /> Branches
+              <GitBranchIcon size={12} className="inline mr-1" /> Branches
             </button>
             <button
               onClick={() => setViewMode("remotes")}
-              className={`px-4 py-3 text-xs font-medium whitespace-nowrap ${
-                viewMode === "remotes"
-                  ? "text-white border-b-2 border-blue-500"
-                  : "text-gray-400 hover:text-white"
-              }`}
+              className={`px-4 py-3 text-xs font-medium whitespace-nowrap ${viewMode === "remotes"
+                ? "text-white border-b-2 border-blue-500"
+                : "text-gray-400 hover:text-white"
+                }`}
             >
               <Upload size={12} className="inline mr-1" /> Remotes
             </button>
@@ -1017,41 +847,37 @@ export default function GitView() {
           <>
             <button
               onClick={() => setViewMode("pullrequests")}
-              className={`px-4 py-3 text-xs font-medium whitespace-nowrap ${
-                viewMode === "pullrequests"
-                  ? "text-white border-b-2 border-blue-500"
-                  : "text-gray-400 hover:text-white"
-              }`}
+              className={`px-4 py-3 text-xs font-medium whitespace-nowrap ${viewMode === "pullrequests"
+                ? "text-white border-b-2 border-blue-500"
+                : "text-gray-400 hover:text-white"
+                }`}
             >
               <GitPullRequest size={12} className="inline mr-1" /> Pull Requests
             </button>
             <button
               onClick={() => setViewMode("issues")}
-              className={`px-4 py-3 text-xs font-medium whitespace-nowrap ${
-                viewMode === "issues"
-                  ? "text-white border-b-2 border-blue-500"
-                  : "text-gray-400 hover:text-white"
-              }`}
+              className={`px-4 py-3 text-xs font-medium whitespace-nowrap ${viewMode === "issues"
+                ? "text-white border-b-2 border-blue-500"
+                : "text-gray-400 hover:text-white"
+                }`}
             >
               <FileText size={12} className="inline mr-1" /> Issues
             </button>
             <button
               onClick={() => setViewMode("actions")}
-              className={`px-4 py-3 text-xs font-medium whitespace-nowrap ${
-                viewMode === "actions"
-                  ? "text-white border-b-2 border-blue-500"
-                  : "text-gray-400 hover:text-white"
-              }`}
+              className={`px-4 py-3 text-xs font-medium whitespace-nowrap ${viewMode === "actions"
+                ? "text-white border-b-2 border-blue-500"
+                : "text-gray-400 hover:text-white"
+                }`}
             >
               <RefreshCw size={12} className="inline mr-1" /> Actions
             </button>
             <button
               onClick={() => setViewMode("releases")}
-              className={`px-4 py-3 text-xs font-medium whitespace-nowrap ${
-                viewMode === "releases"
-                  ? "text-white border-b-2 border-blue-500"
-                  : "text-gray-400 hover:text-white"
-              }`}
+              className={`px-4 py-3 text-xs font-medium whitespace-nowrap ${viewMode === "releases"
+                ? "text-white border-b-2 border-blue-500"
+                : "text-gray-400 hover:text-white"
+                }`}
             >
               <Archive size={12} className="inline mr-1" /> Releases
             </button>
@@ -1436,25 +1262,23 @@ export default function GitView() {
               <ContextMenu key={branch.name || `branch-${index}`}>
                 <ContextMenuTrigger asChild>
                   <div
-                    className={`px-4 py-2 hover:bg-[#2a2d2e] cursor-pointer flex items-center gap-2 ${
-                      branch.current ? "bg-[#2a2d2e]" : ""
-                    }`}
+                    className={`px-4 py-2 hover:bg-[#2a2d2e] cursor-pointer flex items-center gap-2 ${branch.current ? "bg-[#2a2d2e]" : ""
+                      }`}
                     onClick={() =>
                       !branch.current && handleCheckoutBranch(branch.name)
                     }
                   >
-                    <GitBranch
+                    <GitBranchIcon
                       size={14}
                       className={
                         branch.current ? "text-blue-400" : "text-gray-400"
                       }
                     />
                     <span
-                      className={`text-sm flex-1 ${
-                        branch.current
-                          ? "text-blue-400 font-semibold"
-                          : "text-gray-300"
-                      }`}
+                      className={`text-sm flex-1 ${branch.current
+                        ? "text-blue-400 font-semibold"
+                        : "text-gray-300"
+                        }`}
                     >
                       {branch.name}
                     </span>
@@ -1470,7 +1294,7 @@ export default function GitView() {
                         onClick={() => handleCheckoutBranch(branch.name)}
                         className="hover:bg-[#3e3e42]"
                       >
-                        <GitBranch size={14} className="mr-2" /> Checkout
+                        <GitBranchIcon size={14} className="mr-2" /> Checkout
                       </ContextMenuItem>
                       <ContextMenuSeparator className="bg-[#454545]" />
                     </>

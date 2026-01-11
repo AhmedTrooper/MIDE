@@ -18,9 +18,13 @@ export default function ActivityBar({
   activeView,
   onViewChange,
 }: ActivityBarProps) {
-  const { isSidebarCollapsed, toggleSidebar, setSidebarCollapsed } =
+  const { isSidebarCollapsed, toggleSidebar, setSidebarCollapsed, toggleBottomPanel, isBottomPanelVisible } =
     useEditorStore();
   const handleViewClick = (viewId: string) => {
+    if (viewId === "terminal") {
+      toggleBottomPanel();
+      return;
+    }
     if (activeView === viewId && !isSidebarCollapsed) {
       toggleSidebar();
     } else {
@@ -53,11 +57,11 @@ export default function ActivityBar({
             onClick={() => handleViewClick(item.id)}
             className={`
               relative h-12 w-12 rounded-none hover:bg-transparent hover:text-white transition-colors
-              ${activeView === item.id ? "text-white" : ""}
+              ${(activeView === item.id && item.id !== "terminal") || (item.id === "terminal" && isBottomPanelVisible) ? "text-white" : ""}
             `}
             title={item.label}
           >
-            {activeView === item.id && (
+            {((activeView === item.id && item.id !== "terminal") || (item.id === "terminal" && isBottomPanelVisible)) && (
               <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-white" />
             )}
             <item.icon size={24} strokeWidth={1.5} />
